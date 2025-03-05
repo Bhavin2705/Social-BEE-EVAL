@@ -1,0 +1,38 @@
+[
+  {
+    "id": "e3b751fe-5640-4ea6-9aeb-bcb66216c4de",
+    "name": "Bhavin ",
+    "email": "bhavinjain2705@gmail.com",
+    "password": "123654789"
+  },
+  {
+    "id": "fd2cb062-bcdd-40d1-a59f-ca5dfb8585a6",
+    "name": "Bhavin Jain",
+    "email": "bhavinJain@gmail.com",
+    "password": "147852369"
+  },
+  {
+    "id": "bb7b2ea3-324f-46d8-97ef-a39a8d281f2e",
+    "name": "Bhavin",
+    "email": "bhavin@gmail.com",
+    "password": "123654789"
+  },
+  {
+    "id": "1c318e84-3688-44f5-9d6f-6f61c78e2827",
+    "name": "John Do",
+    "email": "john@example.com",
+    "bio": "Software Developer"
+  },
+  {
+    "id": "1eabc12d-4f76-4d48-8369-4e1f753059f1",
+    "name": "Test User",
+    "email": "test@example.com",
+    "password": "password123"
+  },
+  {
+    "id": "64f856b6-2bc1-45ea-b573-55180d664f4a",
+    "name": "Test User",
+    "email": "test1@example.com",
+    "password": "password123"
+  }
+]

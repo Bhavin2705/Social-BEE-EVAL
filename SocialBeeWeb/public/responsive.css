@@ -1,0 +1,98 @@
+/* General Responsive Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+}
+
+/* Header Responsive Styles */
+header {
+    padding: 0 16px;
+}
+
+@media (max-width: 768px) {
+    header {
+        padding: 0 8px;
+    }
+    #searchInput {
+        width: 100%;
+    }
+}
+
+/* Mobile Menu Styles */
+#mobile-menu {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #mobile-menu {
+        display: block;
+    }
+    .mobile-menu ul {
+        flex-direction: column;
+    }
+}
+
+/* Main Content Layout */
+main {
+    padding-top: 80px; /* Adjust based on header height */
+}
+
+@media (max-width: 768px) {
+    main {
+        padding-top: 60px;
+    }
+}
+
+/* Flexbox adjustments for smaller screens */
+@media (max-width: 768px) {
+    .flex-wrap {
+        flex-direction: column;
+    }
+    #left-section, #middle-section, #right-section {
+        width: 100%;
+        padding: 8px;
+    }
+}
+
+/* Post Feed Responsive Styles */
+#post-feed {
+    margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+    #post-feed {
+        margin-top: 10px;
+    }
+}
+
+/* Modal Responsive Styles */
+#createPostModal {
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    #createPostModal {
+        padding: 10px;
+    }
+}
+
+/* Utility Classes for Responsive Design */
+.hidden-mobile {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .hidden-mobile {
+        display: none;
+    }
+}
+
+.visible-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .visible-mobile {
+        display: block;
+    }
+}

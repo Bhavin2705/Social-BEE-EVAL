@@ -1,0 +1,34 @@
+[
+  {
+    "id": "bf67b5ba-b790-4c30-84cc-0648ef1c2767",
+    "message": "Hello, world!",
+    "timestamp": "2025-03-05T13:55:22.207Z"
+  },
+  {
+    "id": "70063d19-6000-46a8-a253-a8287d029150",
+    "message": "Hello World",
+    "userId": "<user-uuid-from-register>",
+    "timestamp": "2025-03-05T19:15:08.984Z",
+    "likes": [],
+    "comments": [],
+    "bookmarks": []
+  },
+  {
+    "id": "53d543c9-0110-479e-a7ec-c66aa34bd6d3",
+    "message": "Hello World",
+    "userId": "69197de3-e014-4490-9e48-633eb6e5f6de",
+    "timestamp": "2025-03-05T19:17:12.104Z",
+    "likes": [],
+    "comments": [],
+    "bookmarks": []
+  },
+  {
+    "id": "8774cb65-35be-4fd2-aee4-0ab1996d9210",
+    "message": "Hello World",
+    "userId": "64f856b6-2bc1-45ea-b573-55180d664f4a",
+    "timestamp": "2025-03-05T19:22:31.667Z",
+    "likes": [],
+    "comments": [],
+    "bookmarks": []
+  }
+]

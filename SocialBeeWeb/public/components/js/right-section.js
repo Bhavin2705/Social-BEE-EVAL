@@ -1,3 +1,9 @@
+document.addEventListener('DOMContentLoaded', () => {
+    initializeFriendRequests();
+    initializeTrending();
+    initializeActivityFeed();
+});
+
 // Animation utility functions
 const fadeIn = (element, duration = 300) => {
     element.style.opacity = 0;
@@ -29,6 +35,11 @@ const initializeFriendRequests = async () => {
     const container = document.getElementById('friend-requests-container');
     const noRequests = document.getElementById('no-requests');
     const requestCount = document.getElementById('request-count');
+
+    if (!container || !noRequests || !requestCount) {
+        console.error('One or more required elements are missing in the DOM.');
+        return;
+    }
 
     const updateFriendRequests = (requests) => {
         container.innerHTML = '';
@@ -72,7 +83,7 @@ const initializeFriendRequests = async () => {
         const handleResponse = () => {
             slideOut(div, 300, () => {
                 div.remove();
-                requests = requests.filter((r) => r !== request); // Remove request from the array
+                requests = requests.filter((r) => r.id !== request.id); // Remove request from the array
                 updateFriendRequests(requests); // Update UI
             });
         };
@@ -83,15 +94,25 @@ const initializeFriendRequests = async () => {
         return div;
     };
 
-    // Fetch random users from randomuser.me
+    // Fetch friend requests from the backend
     const fetchFriendRequests = async (count) => {
         try {
-            const response = await fetch(`https://randomuser.me/api/?results=${count}&nat=in`);
+            const response = await fetch(`https://randomuser.me/api/?results=${count}`);
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.statusText}`);
+            }
             const data = await response.json();
-            return data.results.map((user) => ({
-                name: `${user.name.first} ${user.name.last}`,
-                avatar: user.picture.thumbnail,
-                mutualFriends: Math.floor(Math.random() * 20) + 1, // Random mutual friends
+            console.log('API Response:', data); // Log the response for inspection
+
+            if (!data.results || !Array.isArray(data.results)) {
+                throw new Error('Expected an array of friend requests in results');
+            }
+
+            return data.results.map((user, index) => ({
+                id: index,
+                name: `${user.name?.first || 'Unknown'} ${user.name?.last || ''}`,
+                avatar: user.picture?.thumbnail || 'default-avatar.png',
+                mutualFriends: Math.floor(Math.random() * 20) + 1,
             }));
         } catch (error) {
             console.error('Failed to fetch friend requests:', error);
@@ -108,52 +129,62 @@ const initializeTrending = () => {
     const container = document.getElementById('trending-container');
     const refreshBtn = document.getElementById('refresh-trends');
 
+    if (!container || !refreshBtn) {
+        console.error('One or more required elements are missing in the DOM.');
+        return;
+    }
+
     const updateTrendingTopics = (topics) => {
-        container.innerHTML = '';
+        container.innerHTML = ''; // Clear existing topics
         topics.forEach((topic, index) => {
             const topicElement = createTrendingTopicElement(topic);
             container.appendChild(topicElement);
-            setTimeout(() => slideIn(topicElement), index * 100);
+            setTimeout(() => fadeIn(topicElement), index * 100); // Add fade-in animation
         });
     };
 
     const createTrendingTopicElement = (topic) => {
         const div = document.createElement('div');
         div.className =
-            'bg-white dark:bg-gray-600 p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200';
-        div.innerHTML = `
-        <p class="font-medium text-gray-800 dark:text-gray-100">#${topic.tag}</p>
-        <p class="text-sm text-gray-500 dark:text-gray-400">${topic.posts} posts</p>
-      `;
+            'trending-topic bg-blue-500 text-white rounded-full px-4 py-2 text-sm hover:bg-blue-600 transition cursor-pointer';
+        div.textContent = `${topic.tag}`; // Only display the topic name
         return div;
     };
 
     const mockTrends = [
-        { tag: 'Technology', posts: '10.5K' },
-        { tag: 'Innovation', posts: '8.2K' },
-        { tag: 'Design', posts: '6.7K' },
-        { tag: 'Health', posts: '9.1K' },
-        { tag: 'Fitness', posts: '7.3K' },
+        { tag: 'Technology' },
+        { tag: 'Innovation' },
+        { tag: 'Design' },
+        { tag: 'Health' },
+        { tag: 'Fitness' },
+        { tag: 'Gaming' },
+        { tag: 'Sports' },
     ];
 
     refreshBtn.addEventListener('click', () => {
-        refreshBtn.classList.add('animate-spin');
+        refreshBtn.classList.add('animate-spin'); // Add spin animation to refresh button
         setTimeout(() => {
             refreshBtn.classList.remove('animate-spin');
             const newTopics = mockTrends
                 .sort(() => Math.random() - 0.5)
-                .slice(0, 3); // Select 3 random topics
+                .slice(0, 6); // Select 6 random topics
             updateTrendingTopics(newTopics);
         }, 1000);
     });
 
-    updateTrendingTopics(mockTrends.slice(0, 3));
+    // Initial load with 6 random topics
+    updateTrendingTopics(mockTrends.slice(0, 6));
 };
 
 // Recent Activity Section
 const initializeActivityFeed = () => {
     const feed = document.getElementById('activity-feed');
     const clearBtn = document.getElementById('clear-activity');
+
+    if (!feed || !clearBtn) {
+        console.error('One or more required elements are missing in the DOM.');
+        return;
+    }
 
     const updateActivityFeed = (activities) => {
         feed.innerHTML = ''; // Clear existing feed
@@ -198,10 +229,3 @@ const initializeActivityFeed = () => {
     ];
     updateActivityFeed(mockActivities);
 };
-
-// Initialize all sections
-document.addEventListener('DOMContentLoaded', () => {
-    initializeFriendRequests();
-    initializeTrending();
-    initializeActivityFeed();
-});

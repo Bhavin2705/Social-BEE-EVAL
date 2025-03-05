@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .error-message {
+            color: #ef4444;
+            /* Red-500 */
+            font-size: 0.875rem;
+            /* text-sm */
+            margin-top: 0.25rem;
+            /* mt-1 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <!-- Main Container -->
+    <div id="authContainer" class="bg-white rounded-lg shadow-lg overflow-hidden w-full max-w-md">
+        <!-- Login Form -->
+        <div id="loginForm" class="p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Welcome Back!</h2>
+            <form id="loginFormElement" novalidate>
+                <!-- Email -->
+                <div class="mb-4">
+                    <label for="loginEmail" class="block text-gray-700 mb-2">Email</label>
+                    <input type="email" id="loginEmail"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter your email" required>
+                    <div id="loginEmailError" class="error-message hidden">Please enter a valid email address.</div>
+                </div>
+
+                <!-- Password -->
+                <div class="mb-6">
+                    <label for="loginPassword" class="block text-gray-700 mb-2">Password</label>
+                    <input type="password" id="loginPassword"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter your password" required minlength="8">
+                    <div id="loginPasswordError" class="error-message hidden">Password must be at least 8 characters
+                        long.</div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit"
+                    class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all">
+                    Log In
+                </button>
+
+                <!-- New here? Register -->
+                <p class="text-center text-gray-600 mt-4">
+                    New here? <a href="/register" class="text-blue-500 hover:underline">Register</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        const loginFormElement = document.getElementById('loginFormElement');
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        const loginEmailError = document.getElementById('loginEmailError');
+        const loginPasswordError = document.getElementById('loginPasswordError');
+
+        // Real-time validation for email
+        loginEmail.addEventListener('input', () => {
+            if (loginEmail.validity.valid) {
+                loginEmailError.classList.add('hidden');
+            } else {
+                loginEmailError.classList.remove('hidden');
+            }
+        });
+
+        // Real-time validation for password
+        loginPassword.addEventListener('input', () => {
+            if (loginPassword.validity.valid) {
+                loginPasswordError.classList.add('hidden');
+            } else {
+                loginPasswordError.classList.remove('hidden');
+            }
+        });
+
+        // Login Form Submission
+        loginFormElement.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Validate form fields
+            if (!loginEmail.validity.valid || !loginPassword.validity.valid) {
+                alert('Please fill in all fields correctly.');
+                return;
+            }
+
+            const email = loginEmail.value.trim();
+            const password = loginPassword.value.trim();
+
+            try {
+                // Send login data to the backend
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Store user data in localStorage
+                    localStorage.setItem('loggedInUser', JSON.stringify(result.user));
+                    alert(result.message || 'Login successful!');
+                    // Redirect to homepage after successful login
+                    window.location.href = '/';
+                } else {
+                    alert(result.message || 'Login failed. Please check your credentials.');
+                }
+            } catch (error) {
+                console.error('Error during login:', error);
+                alert('An error occurred during login. Please try again.');
+            }
+        });
+    </script>
+</body>
+
+</html>

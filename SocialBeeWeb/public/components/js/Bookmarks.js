@@ -147,14 +147,14 @@ class Post {
     <div class="flex gap-4 items-center">
         <div class="w-12 h-12 bg-gray-200 rounded-full"></div>
         <div>
-            <p class="font-medium">${this.data.author}</p>
-            <time class="text-sm text-gray-500">${ui.timeAgo(this.data.timestamp)}</time>
+            <p class="font-medium">${this.data.username}</p>
+            <time class="text-sm text-gray-500">${ui.timeAgo(this.data.date)}</time>
         </div>
     </div>
-    <p class="mt-4">${this.data.title}</p>
-    ${this.data.thumbnail ? `
+    <p class="mt-4">${this.data.content}</p>
+    ${this.data.media ? `
         <div class="relative mt-4 cursor-pointer group">
-            <img src="${this.data.thumbnail}" class="w-full rounded-lg">
+            <img src="${this.data.media}" class="w-full rounded-lg">
             <div class="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100">
                 View Post
             </div>
@@ -176,7 +176,6 @@ class Post {
         return post;
     }
 
-
     bindEvents() {
         this.element.querySelector('.like').onclick = () => this.handleLike();
         this.element.querySelector('.comments').onclick = () => this.showComments();
@@ -185,7 +184,7 @@ class Post {
 
         const img = this.element.querySelector('img');
         if (img) {
-            img.onclick = () => window.open(this.data.url, '_blank');
+            img.onclick = () => window.open(this.data.media, '_blank');
         }
     }
 
@@ -226,8 +225,8 @@ class Post {
 
     handleShare() {
         navigator.share?.({
-            title: this.data.title,
-            url: this.data.url
+            title: this.data.content,
+            url: this.data.media
         }).catch(console.error);
     }
 
@@ -256,7 +255,6 @@ class Post {
             }, 200);
         }
     }
-
 }
 
 // Init

@@ -26,13 +26,59 @@ let posts = [];
 let currentTopic = 'technology';
 let after = '';
 
-// Initialize all sidebar components
-function initializeSidebar() {
-    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+// Utility Functions
 
-    if (loggedInUser) {
+/**
+ * Format timestamp to a human-readable format
+ * @param {number} timestamp - Unix timestamp
+ * @returns {string} - Formatted time (e.g., "2 hours ago")
+ */
+function formatTimestamp(timestamp) {
+    const now = Date.now();
+    const secondsAgo = Math.floor((now - timestamp) / 1000);
+
+    if (secondsAgo < 60) return `${secondsAgo} seconds ago`;
+    if (secondsAgo < 3600) return `${Math.floor(secondsAgo / 60)} minutes ago`;
+    if (secondsAgo < 86400) return `${Math.floor(secondsAgo / 3600)} hours ago`;
+    return `${Math.floor(secondsAgo / 86400)} days ago`;
+}
+
+/**
+ * Debounce function for scroll handling
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Wait time in milliseconds
+ * @returns {Function} - Debounced function
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Sidebar Initialization
+
+/**
+ * Initialize the sidebar with user data and topic list
+ */
+function initializeSidebar() {
+    let loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+
+    // Check if loggedInUser is null or undefined
+    if (!loggedInUser) {
+        loggedInUser = { name: 'Guest' }; // Provide a default name
+    }
+
+    if (loggedInUser.name) {
         document.getElementById('userName').textContent = loggedInUser.name;
         document.getElementById('userHandle').textContent = `@${loggedInUser.name.toLowerCase().replace(/\s+/g, '_')}`;
+    } else {
+        console.error('loggedInUser.name is undefined or null');
     }
 
     const msgDot = document.getElementById('msgCount');
@@ -54,9 +100,7 @@ function initializeSidebar() {
 
         topicEl.addEventListener('click', () => {
             const selectedTopic = document.querySelector('.topic-item.selected');
-            if (selectedTopic) {
-                selectedTopic.classList.remove('selected');
-            }
+            if (selectedTopic) selectedTopic.classList.remove('selected');
             topicEl.classList.add('selected');
             currentTopic = topic.name.toLowerCase();
             loadPostsByTopic(currentTopic);
@@ -72,232 +116,254 @@ function initializeSidebar() {
     });
 }
 
-async function getRandomUser() {
+// Reddit API Functions
+
+/**
+ * Fetch Reddit posts using the proxy route with error handling and retries
+ * @param {string} subreddit - The subreddit to fetch posts from
+ * @returns {Promise<Array>} - Array of posts
+ */
+async function fetchRedditPosts(subreddit) {
     try {
-        const response = await fetch(`https://randomuser.me/api/?results=${count}&nat=in`);
+        // Add a small delay to prevent rate limiting issues
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        const response = await fetch(`/reddit-posts?subreddit=${subreddit}&after=${after}`);
+        if (!response.ok) throw new Error(`Failed to fetch data from subreddit: ${subreddit}`);
+
         const data = await response.json();
-        return data.results[0];
+        if (!data.data || !data.data.children) return [];
+
+        after = data.data.after;
+
+        return data.data.children
+            .map(post => {
+                if (!post.data) return null;
+                if (post.data.is_self || post.data.thumbnail === 'self') return null;
+
+                // Only return posts with a valid image URL
+                const imageUrl = post.data.preview?.images?.[0]?.source?.url?.replace(/&amp;/g, '&');
+                if (!imageUrl || !imageUrl.startsWith('http')) return null;
+
+                return {
+                    title: post.data.title,
+                    url: post.data.url,
+                    thumbnail: imageUrl,
+                    id: post.data.id,
+                    author: post.data.author,
+                    subreddit: post.data.subreddit,
+                    permalink: `https://reddit.com${post.data.permalink}`,
+                    created: post.data.created_utc * 1000, // Convert to milliseconds
+                };
+            })
+            .filter(post => post !== null);
     } catch (error) {
-        console.error('Error fetching random user:', error);
-        return null;
+        console.error('Error fetching Reddit posts:', error);
+        return [];
     }
 }
+function isUserLoggedIn() {
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+    return loggedInUser && loggedInUser.name !== 'Guest';
+}
 
+// Post Creation and Interaction
+
+/**
+ * Create a post element with improved styling and functionality
+ * @param {Object} post - Post data
+ * @returns {HTMLElement} - Post element
+ */
 function createPost(post) {
     const postElement = document.createElement('div');
-    postElement.classList.add('feed-item', 'bg-white', 'dark:bg-gray-800', 'p-4', 'rounded-lg', 'shadow-md', 'hover:shadow-lg', 'transition-all');
-    postElement.dataset.postId = post.id;
+    postElement.className = 'post mb-6 rounded-lg overflow-hidden shadow-lg bg-white hover:shadow-xl transition-shadow duration-300';
 
-    const postTimestamp = new Date(post.timestamp);
+    // Load comments from local storage
+    const comments = loadCommentsFromLocalStorage(post.id);
 
     postElement.innerHTML = `
-        <div class="flex items-center space-x-4">
-            <div class="profile-pic"></div>
-            <div class="post-author">
-                <span class="font-semibold text-gray-900 dark:text-white">${post.author}</span>
-                <p class="text-sm text-gray-500 dark:text-gray-400">${formatTimeAgo(postTimestamp)}</p>
+        <div class="relative">
+            <img src="${post.thumbnail}" alt="${post.title}" class="w-full h-64 object-cover cursor-pointer" onerror="this.style.display='none'">
+            <div class="p-4">
+                <h3 class="text-xl font-semibold mb-2">${post.title}</h3>
+                <p class="text-gray-600 text-sm mb-4">
+                    Posted by <span class="font-medium">${post.author}</span>
+                </p>
+                <div class="flex items-center justify-between text-gray-500">
+                    <button class="like-btn flex items-center space-x-1 hover:text-red-500">
+                        <i class="far fa-heart"></i>
+                    </button>
+                    <button class="comment-btn flex items-center space-x-1 hover:text-blue-500">
+                        <i class="far fa-comment"></i>
+                        <span class="comment-count">${comments.length}</span>
+                    </button>
+                    <button class="share-btn flex items-center space-x-1 hover:text-green-500">
+                        <i class="fas fa-share-alt"></i>
+                    </button>
+                    <button class="bookmark-btn flex items-center space-x-1 hover:text-yellow-500">
+                        <i class="far fa-bookmark"></i>
+                    </button>
+                </div>
             </div>
         </div>
-        <p class="mt-4 text-gray-800 dark:text-gray-200">${post.title}</p>
-        ${post.thumbnail ? `
-            <div class="image-container relative">
-                <img src="${post.thumbnail}" alt="Post Image" class="mt-4 w-full h-auto rounded-lg post-image cursor-pointer" />
-                <div class="overlay absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 text-white text-xl font-bold opacity-0 hover:opacity-100 transition-opacity cursor-pointer" data-url="${post.url}">
-                    Click to View
-                </div>
-            </div>` : ''}
-        <div class="mt-4 flex justify-between text-gray-600 dark:text-gray-400">
-            <button class="like-btn flex items-center space-x-1 hover:text-blue-600">
-                <span class="like-icon">&#9829;</span>
-                <span>Like</span>
-            </button>
-            <button class="comment-btn flex items-center space-x-1 hover:text-blue-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                </svg>
-                <span>Comment</span>
-            </button>
-            <button class="share-btn flex items-center space-x-1 hover:text-blue-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
-                </svg>
-                <span>Share</span>
-            </button>
-            <button class="bookmark-btn flex items-center space-x-1 hover:text-blue-600">
-                <svg class="w-5 h-5 bookmark-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
-                </svg>
-            </button>
-        </div>
-        <div class="comment-box hidden mt-4">
-            <textarea id="comment-text-${post.id}" class="comment-textarea p-3 w-full border border-gray-300 rounded-lg shadow-sm resize-none text-gray-900 dark:text-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Write your comment..."></textarea>
-            <button class="submit-comment-btn bg-blue-500 text-white mt-2 p-2 rounded-lg hover:bg-blue-600 transition-all">Submit Comment</button>
-            <div class="comments-list mt-4"></div>
-        </div>`;
-
-    const likeButton = postElement.querySelector('.like-btn');
-    const likeIcon = likeButton.querySelector('.like-icon');
-    likeButton.addEventListener('click', () => toggleLike(likeButton, likeIcon, post.id));
-
-    const submitCommentButton = postElement.querySelector('.submit-comment-btn');
-    submitCommentButton.addEventListener('click', async () => {
-        const commentText = postElement.querySelector(`#comment-text-${post.id}`).value;
-        if (commentText.trim()) {
-            const randomUser = await getRandomUser();
-            if (randomUser) {
-                const commentsList = postElement.querySelector('.comments-list');
-                const commentDiv = document.createElement('div');
-                const timestamp = new Date();
-                commentDiv.classList.add('comment-item', 'bg-gray-100', 'dark:bg-gray-700', 'p-3', 'rounded-lg', 'mb-4', 'flex', 'items-start');
-                commentDiv.innerHTML = `
-                    <div class="flex-shrink-0">
-                        <img src="${randomUser.picture.medium}" alt="User Profile" class="w-10 h-10 rounded-full" />
-                    </div>
-                    <div class="ml-3 w-full">
-                        <div class="comment-header flex items-center justify-between">
-                            <span class="font-semibold text-gray-900 dark:text-white">${randomUser.name.first} ${randomUser.name.last}</span>
-                            <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">${formatTimeAgo(timestamp)}</span>
+        <div class="comment-section hidden p-4 border-t">
+            <textarea class="w-full p-2 border rounded mb-2" placeholder="Write a comment..."></textarea>
+            <button class="w-full px-4 py-2 bg-blue-500 text-white rounded post-comment-btn">Post Comment</button>
+            <div class="comments-container mt-4">
+                ${comments.map(comment => `
+                    <div class="comment mb-2 p-2 bg-gray-100 rounded flex justify-between items-start">
+                        <div class="comment-content">
+                            <span class="font-medium">${comment.author}</span>
+                            <p class="mt-1">${comment.text}</p>
                         </div>
-                        <p class="mt-2 text-gray-800 dark:text-gray-200">${commentText}</p>
+                        <span class="text-gray-500 text-sm">${formatTimestamp(comment.timestamp)}</span>
                     </div>
-                `;
-                commentsList.appendChild(commentDiv);
-                postElement.querySelector(`#comment-text-${post.id}`).value = '';
-            }
-        }
-    });
+                `).join('')}
+            </div>
+        </div>
+    `;
 
-    const shareButton = postElement.querySelector('.share-btn');
-    shareButton.addEventListener('click', () => {
-        navigator.share({
-            title: post.title,
-            url: post.url
-        }).catch(err => {
-            console.error('Error sharing post:', err);
-        });
-    });
-
-    const commentButton = postElement.querySelector('.comment-btn');
-    commentButton.addEventListener('click', () => {
-        const commentBox = postElement.querySelector('.comment-box');
-        commentBox.classList.toggle('hidden');
-    });
-
-    const bookmarkButton = postElement.querySelector('.bookmark-btn');
-    bookmarkButton.addEventListener('click', () => {
-        toggleBookmark(post, bookmarkButton);
-    });
-
-    const postImage = postElement.querySelector('.post-image');
-    const overlay = postElement.querySelector('.overlay');
-
-    if (postImage && overlay) {
-        postImage.addEventListener('click', () => {
-            window.open(post.url, '_blank');
-        });
-
-        overlay.addEventListener('click', (event) => {
-            event.stopPropagation();
-            window.open(post.url, '_blank');
-        });
-    }
+    // Add event listeners for post interaction
+    addPostEventListeners(postElement, post, comments);
 
     return postElement;
 }
 
-function formatTimeAgo(timestamp) {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - timestamp) / 1000);
+/**
+ * Add event listeners to post elements
+ * @param {HTMLElement} postElement - The post element
+ * @param {Object} post - Post data
+ * @param {Array} comments - Array of comments
+ */
+function addPostEventListeners(postElement, post, comments) {
+    const postImage = postElement.querySelector('img');
+    postImage.addEventListener('click', () => {
+        window.open(post.permalink, '_blank');
+    });
 
-    if (diffInSeconds < 60) return 'Just now';
+    const likeBtn = postElement.querySelector('.like-btn');
+    const commentBtn = postElement.querySelector('.comment-btn');
+    const shareBtn = postElement.querySelector('.share-btn');
+    const bookmarkBtn = postElement.querySelector('.bookmark-btn');
+    const commentSection = postElement.querySelector('.comment-section');
+    const postCommentBtn = postElement.querySelector('.post-comment-btn');
+    const commentsContainer = postElement.querySelector('.comments-container');
+    const commentCount = postElement.querySelector('.comment-count');
 
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+    likeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isUserLoggedIn()) {
+            alert('Kindly log in before liking a post.');
+            return;
+        }
+        likeBtn.querySelector('i').classList.toggle('fas');
+        likeBtn.querySelector('i').classList.toggle('far');
+    });
 
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    commentBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isUserLoggedIn()) {
+            alert('Kindly log in before commenting.');
+            return;
+        }
+        commentSection.classList.toggle('hidden');
+    });
 
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 30) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    shareBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (navigator.share) {
+            navigator.share({
+                title: post.title,
+                url: post.permalink
+            }).then(() => {
+                console.log('Thanks for sharing!');
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(post.permalink).then(() => {
+                alert('Link copied to clipboard!');
+            });
+        }
+    });
 
-    const diffInMonths = Math.floor(diffInDays / 30);
-    if (diffInMonths < 12) return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
+    bookmarkBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isUserLoggedIn()) {
+            alert('Kindly log in before bookmarking a post.');
+            return;
+        }
+        bookmarkBtn.querySelector('i').classList.toggle('fas');
+        bookmarkBtn.querySelector('i').classList.toggle('far');
+    });
 
-    const diffInYears = Math.floor(diffInMonths / 12);
-    return `${diffInYears} year${diffInYears > 1 ? 's' : ''} ago`;
+    postCommentBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!isUserLoggedIn()) {
+            alert('Kindly log in before commenting.');
+            return;
+        }
+        const commentText = postElement.querySelector('textarea').value;
+        if (commentText.trim() === '') return;
+
+        let loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!loggedInUser) {
+            loggedInUser = { name: 'Guest' }; // Provide a default name
+        }
+
+        const timestamp = Date.now();
+
+        const comment = {
+            author: loggedInUser.name,
+            text: commentText,
+            timestamp: timestamp,
+        };
+
+        comments.push(comment);
+        saveCommentsToLocalStorage(post.id, comments);
+
+        commentCount.textContent = comments.length;
+
+        const commentElement = document.createElement('div');
+        commentElement.className = 'comment mb-2 p-2 bg-gray-100 rounded flex justify-between items-start';
+        commentElement.innerHTML = `
+            <div class="comment-content">
+                <span class="font-medium">${comment.author}</span>
+                <p class="mt-1">${comment.text}</p>
+            </div>
+            <span class="text-gray-500 text-sm">${formatTimestamp(comment.timestamp)}</span>
+        `;
+        commentsContainer.appendChild(commentElement);
+
+        postElement.querySelector('textarea').value = '';
+    });
+}
+// Local Storage Functions
+
+/**
+ * Save comments to local storage
+ * @param {string} postId - The ID of the post
+ * @param {Array} comments - Array of comments
+ */
+function saveCommentsToLocalStorage(postId, comments) {
+    localStorage.setItem(`comments_${postId}`, JSON.stringify(comments));
 }
 
-async function fetchRedditPosts(subreddit) {
-    const url = `https://www.reddit.com/r/${subreddit}/new.json?after=${after}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch data from subreddit: ${subreddit}`);
-    }
-
-    const data = await response.json();
-    after = data.data.after;
-
-    return data.data.children
-        .map(post => {
-            if (post.data.is_self || post.data.thumbnail === 'self') {
-                return null;
-            }
-
-            let imageUrl = null;
-
-            if (post.data.preview?.images?.[0]?.source?.url) {
-                imageUrl = post.data.preview.images[0].source.url.replace(/&amp;/g, '&');
-            } else if (post.data.url_overridden_by_dest) {
-                const urlLower = post.data.url_overridden_by_dest.toLowerCase();
-                if (urlLower.match(/\.(jpg|jpeg|png|gif)(\?.*)?$/i) ||
-                    urlLower.includes('imgur.com') ||
-                    urlLower.includes('i.redd.it')) {
-                    imageUrl = post.data.url_overridden_by_dest;
-                }
-            } else if (post.data.url) {
-                const urlLower = post.data.url.toLowerCase();
-                if (urlLower.match(/\.(jpg|jpeg|png|gif)(\?.*)?$/i) ||
-                    urlLower.includes('imgur.com') ||
-                    urlLower.includes('i.redd.it')) {
-                    imageUrl = post.data.url;
-                }
-            }
-
-            if (!imageUrl || !imageUrl.startsWith('http')) {
-                return null;
-            }
-
-            return {
-                title: post.data.title,
-                url: post.data.url,
-                thumbnail: imageUrl,
-                id: post.data.id,
-                author: post.data.author,
-            };
-        })
-        .filter(post => post !== null);
+/**
+ * Load comments from local storage
+ * @param {string} postId - The ID of the post
+ * @returns {Array} - Array of comments
+ */
+function loadCommentsFromLocalStorage(postId) {
+    const comments = localStorage.getItem(`comments_${postId}`);
+    return comments ? JSON.parse(comments) : [];
 }
 
-function toggleLike(likeButton, likeIcon, postId) {
-    const isLiked = likeIcon.classList.contains('text-red-500');
+// Main Functionality
 
-    if (isLiked) {
-        likeIcon.classList.remove('text-red-500');
-        likeIcon.innerHTML = '&#9829;';
-        likeButton.innerHTML = `<span class="like-icon">&#9829;</span> Like`;
-    } else {
-        likeIcon.classList.add('text-red-500');
-        likeIcon.innerHTML = '&#10084;&#65039;';
-        likeButton.innerHTML = `<span class="like-icon text-red-500">&#10084;&#65039;</span> Unlike`;
-    }
-
-    const post = posts.find(p => p.id === postId);
-    if (post) {
-        post.isLiked = !isLiked;
-    }
-}
-
+/**
+ * Load posts by topic with improved error handling
+ * @param {string} topic - The topic to load posts for
+ * @param {boolean} isInfiniteScroll - Whether this is an infinite scroll request
+ */
 async function loadPostsByTopic(topic, isInfiniteScroll = false) {
     const subreddits = topicToSubreddit[topic];
     if (!subreddits || subreddits.length === 0) return;
@@ -323,13 +389,20 @@ async function loadPostsByTopic(topic, isInfiniteScroll = false) {
         const seenUrls = new Set(posts.map(p => p.url));
 
         while (allPosts.length < 10 && attempts < maxAttempts) {
-            for (let subreddit of subreddits) {
-                const fetchedPosts = await fetchRedditPosts(subreddit);
-                const uniquePosts = fetchedPosts.filter(post => !seenUrls.has(post.url));
-                uniquePosts.forEach(post => seenUrls.add(post.url));
-                allPosts = [...allPosts, ...uniquePosts];
+            for (const subreddit of subreddits) {
+                try {
+                    const fetchedPosts = await fetchRedditPosts(subreddit);
+                    const uniquePosts = fetchedPosts.filter(post => !seenUrls.has(post.url));
+                    uniquePosts.forEach(post => seenUrls.add(post.url));
+                    allPosts = [...allPosts, ...uniquePosts];
+                } catch (subError) {
+                    console.warn(`Failed to fetch from subreddit ${subreddit}:`, subError);
+                    continue;
+                }
             }
             attempts++;
+            if (allPosts.length >= 10) break;
+            if (attempts < maxAttempts) await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         const shuffledPosts = allPosts.sort(() => Math.random() - 0.5);
@@ -341,12 +414,19 @@ async function loadPostsByTopic(topic, isInfiniteScroll = false) {
                 posts.push(post);
             });
         } else if (!isInfiniteScroll) {
-            const noImageMessage = document.createElement('p');
-            noImageMessage.textContent = 'No posts with images available at the moment.';
+            const noImageMessage = document.createElement('div');
+            noImageMessage.className = 'p-4 text-center text-gray-500';
+            noImageMessage.textContent = 'No posts with images available at the moment. Please try again later.';
             postFeed.appendChild(noImageMessage);
         }
     } catch (error) {
         console.error("Error fetching posts:", error);
+        if (!isInfiniteScroll) {
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'p-4 text-center text-red-500';
+            errorMessage.textContent = 'An error occurred while loading posts. Please try again later.';
+            postFeed.appendChild(errorMessage);
+        }
     } finally {
         isLoading = false;
         loadingIndicator?.classList.add('hidden');
@@ -364,14 +444,15 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPostsByTopic(currentTopic);
     }
 
-    window.addEventListener('scroll', function () {
+    // Use debounced scroll handler to prevent too many API calls
+    window.addEventListener('scroll', debounce(() => {
+        if (isLoading) return;
+
         const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
         const scrollPosition = window.scrollY;
 
-        if (scrollPosition >= scrollableHeight - 10) {
+        if (scrollPosition >= scrollableHeight - 100) {
             loadPostsByTopic(currentTopic, true);
         }
-    });
-
-    loadPostsByTopic(currentTopic);
+    }, 200));
 });

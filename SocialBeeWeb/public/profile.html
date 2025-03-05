@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Page</title>
+    <!-- <link rel="stylesheet" href="styles.css"> -->
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base styles */
+        :root {
+            --primary-color: #0070f3;
+            --primary-hover: #0060df;
+            --background-color: #f9fafb;
+            --card-background: #ffffff;
+            --text-color: #111827;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --input-background: #ffffff;
+            --input-border: #d1d5db;
+            --input-focus: #0070f3;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius: 0.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+                "Helvetica Neue", sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Profile Header */
+        .profile-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .profile-avatar-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .profile-avatar {
+            width: 128px;
+            height: 128px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid var(--card-background);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.4);
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .profile-avatar:hover .avatar-overlay {
+            opacity: 1;
+        }
+
+        .profile-name {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+
+        .profile-email {
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            width: 100%;
+        }
+
+        .tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1rem;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .tab-button.active {
+            background-color: var(--card-background);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background-color: var(--card-background);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-description {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .card-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--input-background);
+            border: 1px solid var(--input-border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.2);
+        }
+
+        input:disabled,
+        textarea:disabled {
+            background-color: var(--background-color);
+            cursor: not-allowed;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .password-input-container {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            padding: 0 0.75rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+        }
+
+        .upload-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .upload-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: var(--card-background);
+            border: 1px solid var(--input-border);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .upload-button:hover {
+            background-color: var(--background-color);
+        }
+
+        .upload-hint {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .submit-button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Buttons */
+        .icon-button {
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            transition: background-color 0.2s ease;
+        }
+
+        .icon-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .card-header .icon-button {
+            color: var(--text-muted);
+        }
+
+        .card-header .icon-button:hover {
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        /* Password requirements */
+        .requirements-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .requirements-list {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .requirements-list li {
+            margin-bottom: 0.25rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .profile-avatar {
+                width: 96px;
+                height: 96px;
+            }
+
+            .profile-name {
+                font-size: 1.5rem;
+            }
+
+            .card-header,
+            .card-content,
+            .card-footer {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="profile-header">
+            <div class="profile-avatar-container">
+                <div class="profile-avatar">
+                    <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-G9y9zdBMGxzuob6IDkm8zBhLxxIpAw.png"
+                        alt="Profile Picture" id="profile-image">
+                    <div class="avatar-overlay">
+                        <button class="icon-button">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <h1 class="profile-name" id="profile-name">Jill Nichols</h1>
+            <p class="profile-email" id="profile-email">jill.nichols@example.com</p>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="profile">Profile Information</button>
+                <button class="tab-button" data-tab="security">Security</button>
+            </div>
+
+            <div class="tab-content active" id="profile-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Profile Details</h2>
+                            <p class="card-description">Update your profile information</p>
+                        </div>
+                        <button class="icon-button" id="edit-toggle">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    <div class="card-content">
+                        <form id="profile-form">
+                            <div class="form-group">
+                                <label for="name">Name</label>
+                                <input type="text" id="name" value="Jill Nichols" disabled>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" id="email" value="jill.nichols@example.com" disabled>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bio">Bio</label>
+                                <textarea id="bio" placeholder="Tell us about yourself" disabled></textarea>
+                            </div>
+
+                            <div class="form-group" id="profile-picture-group" style="display: none;">
+                                <label for="profile-picture">Profile Picture</label>
+                                <div class="upload-container">
+                                    <button type="button" class="upload-button" id="upload-button">
+                                        <i class="fas fa-upload"></i>
+                                        Upload Image
+                                    </button>
+                                    <p class="upload-hint">JPG, PNG or GIF. 1MB max.</p>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="submit-button" id="save-profile-button" style="display: none;">
+                                Save Changes
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="security-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2 class="card-title">Change Password</h2>
+                            <p class="card-description">Update your password to keep your account secure</p>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <form id="password-form">
+                            <div class="form-group">
+                                <label for="current-password">Current Password</label>
+                                <div class="password-input-container">
+                                    <input type="password" id="current-password"
+                                        placeholder="Enter your current password">
+                                    <button type="button" class="password-toggle">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="new-password">New Password</label>
+                                <div class="password-input-container">
+                                    <input type="password" id="new-password" placeholder="Enter your new password">
+                                    <button type="button" class="password-toggle">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="confirm-password">Confirm New Password</label>
+                                <div class="password-input-container">
+                                    <input type="password" id="confirm-password"
+                                        placeholder="Confirm your new password">
+                                    <button type="button" class="password-toggle">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="submit-button">
+                                Update Password
+                            </button>
+                        </form>
+                    </div>
+                    <div class="card-footer">
+                        <h3 class="requirements-title">Password Requirements:</h3>
+                        <ul class="requirements-list">
+                            <li>Minimum 8 characters long</li>
+                            <li>At least one uppercase letter</li>
+                            <li>At least one number</li>
+                            <li>At least one special character</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            // Fetch profile data on page load
+            const fetchProfileData = async () => {
+                try {
+                    const response = await fetch("/api/profile", {
+                        method: "GET",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch profile data");
+                    }
+
+                    const profileData = await response.json();
+
+                    // Populate form fields
+                    document.getElementById("name").value = profileData.name || "";
+                    document.getElementById("email").value = profileData.email || "";
+                    document.getElementById("bio").value = profileData.bio || "";
+                    document.getElementById("profile-image").src = profileData.profilePicture || "default-image-url.png";
+                    document.getElementById("profile-name").textContent = profileData.name || "Jill Nichols";
+                    document.getElementById("profile-email").textContent = profileData.email || "jill.nichols@example.com";
+                } catch (error) {
+                    console.error("Error fetching profile data:", error);
+                    alert("Failed to load profile data. Please try again.");
+                }
+            };
+
+            await fetchProfileData();
+
+            // Tab switching
+            const tabButtons = document.querySelectorAll(".tab-button");
+            const tabContents = document.querySelectorAll(".tab-content");
+
+            tabButtons.forEach((button) => {
+                button.addEventListener("click", () => {
+                    // Remove active class from all buttons and contents
+                    tabButtons.forEach((btn) => btn.classList.remove("active"));
+                    tabContents.forEach((content) => content.classList.remove("active"));
+
+                    // Add active class to clicked button and corresponding content
+                    button.classList.add("active");
+                    const tabId = button.getAttribute("data-tab");
+                    document.getElementById(`${tabId}-tab`).classList.add("active");
+                });
+            });
+
+            // Edit mode toggle
+            const editToggle = document.getElementById("edit-toggle");
+            const nameInput = document.getElementById("name");
+            const emailInput = document.getElementById("email");
+            const bioInput = document.getElementById("bio");
+            const profilePictureGroup = document.getElementById("profile-picture-group");
+            const saveProfileButton = document.getElementById("save-profile-button");
+            let isEditing = false;
+
+            editToggle.addEventListener("click", () => {
+                isEditing = !isEditing;
+
+                // Toggle edit icon
+                editToggle.innerHTML = isEditing ? '<i class="fas fa-save"></i>' : '<i class="fas fa-edit"></i>';
+
+                // Toggle input disabled state
+                nameInput.disabled = !isEditing;
+                emailInput.disabled = !isEditing;
+                bioInput.disabled = !isEditing;
+
+                // Toggle profile picture upload and save button visibility
+                profilePictureGroup.style.display = isEditing ? "block" : "none";
+                saveProfileButton.style.display = isEditing ? "block" : "none";
+            });
+
+            // Password visibility toggle
+            const passwordToggles = document.querySelectorAll(".password-toggle");
+
+            passwordToggles.forEach((toggle) => {
+                toggle.addEventListener("click", () => {
+                    const input = toggle.previousElementSibling;
+                    const icon = toggle.querySelector("i");
+
+                    if (input.type === "password") {
+                        input.type = "text";
+                        icon.classList.remove("fa-eye");
+                        icon.classList.add("fa-eye-slash");
+                    } else {
+                        input.type = "password";
+                        icon.classList.remove("fa-eye-slash");
+                        icon.classList.add
+                        icon.classList.add("fa-eye");
+                    }
+                });
+            });
+
+            // Handle profile picture upload
+            const uploadButton = document.getElementById("upload-button");
+            const profileImage = document.getElementById("profile-image");
+
+            uploadButton.addEventListener("click", async () => {
+                const fileInput = document.createElement("input");
+                fileInput.type = "file";
+                fileInput.accept = "image/*";
+                fileInput.onchange = async (e) => {
+                    const file = e.target.files[0];
+
+                    if (file) {
+                        const formData = new FormData();
+                        formData.append("profilePicture", file);
+
+                        try {
+                            const response = await fetch("/api/upload-profile-picture", {
+                                method: "POST",
+                                headers: {
+                                    "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                                },
+                                body: formData,
+                            });
+
+                            if (!response.ok) {
+                                throw new Error("Failed to upload profile picture");
+                            }
+
+                            const result = await response.json();
+                            profileImage.src = result.profilePictureUrl;
+                            alert("Profile picture updated successfully!");
+                        } catch (error) {
+                            console.error("Error uploading profile picture:", error);
+                            alert("Failed to upload profile picture. Please try again.");
+                        }
+                    }
+                };
+
+                fileInput.click();
+            });
+
+            // Handle profile form submission
+            const profileForm = document.getElementById("profile-form");
+
+            profileForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                // Get form data
+                const formData = {
+                    name: nameInput.value,
+                    email: emailInput.value,
+                    bio: bioInput.value,
+                };
+
+                try {
+                    const response = await fetch("/api/profile", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                        },
+                        body: JSON.stringify(formData),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Failed to update profile");
+                    }
+
+                    // Toggle back to view mode
+                    isEditing = false;
+                    editToggle.innerHTML = '<i class="fas fa-edit"></i>';
+                    nameInput.disabled = true;
+                    emailInput.disabled = true;
+                    bioInput.disabled = true;
+                    profilePictureGroup.style.display = "none";
+                    saveProfileButton.style.display = "none";
+
+                    // Update displayed name and email
+                    document.getElementById("profile-name").textContent = formData.name;
+                    document.getElementById("profile-email").textContent = formData.email;
+
+                    alert("Profile updated successfully!");
+                } catch (error) {
+                    console.error("Error updating profile:", error);
+                    alert("Failed to update profile. Please try again.");
+                }
+            });
+
+            // Handle password form submission
+            const passwordForm = document.getElementById("password-form");
+
+            passwordForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                // Get form data
+                const currentPassword = document.getElementById("current-password").value;
+                const newPassword = document.getElementById("new-password").value;
+                const confirmPassword = document.getElementById("confirm-password").value;
+
+                // Basic validation
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    alert("Please fill in all password fields");
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    alert("New passwords do not match");
+                    return;
+                }
+
+                try {
+                    const response = await fetch("/api/change-password", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+                        },
+                        body: JSON.stringify({ currentPassword, newPassword }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Failed to update password");
+                    }
+
+                    // Reset form
+                    passwordForm.reset();
+
+                    alert("Password updated successfully!");
+                } catch (error) {
+                    console.error("Error updating password:", error);
+                    alert("Failed to update password. Please try again.");
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

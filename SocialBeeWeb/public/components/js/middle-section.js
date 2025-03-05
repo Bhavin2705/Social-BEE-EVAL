@@ -1,294 +1,303 @@
-// DOM Elements
-const gridViewBtn = document.getElementById('grid-view');
-const listViewBtn = document.getElementById('list-view');
-const refreshFeedBtn = document.getElementById('refresh-feed');
-const createPostBtn = document.getElementById('create-post-button');
-const createPostModal = document.getElementById('create-post-modal');
-const closeModalBtn = document.getElementById('close-modal');
-const submitPostBtn = document.getElementById('submit-post');
-const postContent = document.getElementById('post-content');
-const postFeed = document.getElementById('post-feed');
-const loadingIndicator = document.getElementById('loading-indicator');
-const errorState = document.getElementById('error-state');
-const retryButton = document.getElementById('retry-button');
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const createPostBtn = document.getElementById('create-post-button');
+    const createPostModal = document.getElementById('create-post-modal');
+    const closeModalBtn = document.getElementById('close-modal');
+    const submitPostBtn = document.getElementById('submit-post');
+    const postContent = document.getElementById('post-content');
+    const postFeed = document.getElementById('post-feed');
+    const uploadMediaButton = document.getElementById('upload-media-button');
+    const uploadMediaButtonModal = document.getElementById('upload-media-button-modal');
+    const mediaPreview = document.getElementById('media-preview');
+    const mediaPreviewImage = document.getElementById('media-preview-image');
+    const storyContainer = document.getElementById('story-container');
+    const addStoryButton = document.getElementById('add-story-button');
 
-// State Management
-let currentViewMode = 'list'; // Default to 'list' view
+    // State Management
+    let mediaFile = null;
 
-// View Controls
-function setViewMode(mode) {
-    currentViewMode = mode;
-    postFeed.className = `space-y-6 transition-all duration-300 ${mode === 'grid' ? 'grid grid-cols-2 gap-4' : ''}`;
-    gridViewBtn.classList.toggle('bg-gray-100', mode === 'grid');
-    listViewBtn.classList.toggle('bg-gray-100', mode === 'list');
-}
-
-gridViewBtn.addEventListener('click', () => setViewMode('grid'));
-listViewBtn.addEventListener('click', () => setViewMode('list'));
-
-// Utility Function to Create Story Element
-function createStoryElement(story) {
-    const storyElement = document.createElement('div');
-    storyElement.className = 'flex flex-col items-center space-y-1 min-w-[72px]';
-    storyElement.innerHTML = `
-        <div class="w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 p-[2px] cursor-pointer">
-            <div class="w-full h-full rounded-full border-2 border-white overflow-hidden">
-                <img src="${story.avatar}" alt="${story.username}" class="w-full h-full object-cover">
-            </div>
-        </div>
-        <span class="text-xs text-gray-600 dark:text-gray-400">${story.username}</span>
-    `;
-    return storyElement;
-}
-
-// Modal Management
-function toggleModal(show = true) {
-    createPostModal.classList.toggle('hidden', !show);
-    if (show) {
-        postContent.focus();
-    } else {
-        postContent.value = '';
+    // Authentication Check
+    function getCurrentUser() {
+        const user = localStorage.getItem('loggedInUser');
+        return user ? JSON.parse(user) : null;
     }
-}
 
-createPostBtn.addEventListener('click', () => toggleModal(true));
-closeModalBtn.addEventListener('click', () => toggleModal(false));
-
-// Close modal on outside click
-createPostModal.addEventListener('click', (e) => {
-    if (e.target === createPostModal) {
-        toggleModal(false);
+    // Modal Management
+    function toggleModal(show = true) {
+        createPostModal.classList.toggle('hidden', !show);
+        if (show) {
+            postContent.focus();
+        } else {
+            postContent.value = '';
+            mediaPreview.classList.add('hidden');
+            mediaFile = null;
+        }
     }
-});
 
-// Post Creation
-submitPostBtn.addEventListener('click', () => {
-    const content = postContent.value.trim();
-    if (content) {
+    createPostBtn.addEventListener('click', () => {
+        const user = getCurrentUser();
+        if (!user) {
+            alert("You must be logged in to create a post.");
+            return;
+        }
+        toggleModal(true);
+    });
+
+    closeModalBtn.addEventListener('click', () => toggleModal(false));
+
+    // Media Upload Handling
+    function handleMediaUpload() {
+        return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*, video/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve({ file, url: e.target.result });
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        });
+    }
+
+    // Add Media Upload Event Listeners
+    uploadMediaButton.addEventListener('click', async () => {
+        const { file, url } = await handleMediaUpload();
+        mediaFile = file;
+        mediaPreviewImage.src = url;
+        mediaPreview.classList.remove('hidden');
+    });
+
+    uploadMediaButtonModal.addEventListener('click', async () => {
+        const { file, url } = await handleMediaUpload();
+        mediaFile = file;
+        mediaPreviewImage.src = url;
+        mediaPreview.classList.remove('hidden');
+    });
+
+    // Post Creation
+    submitPostBtn.addEventListener('click', () => {
+        const user = getCurrentUser();
+        if (!user) {
+            alert("You must be logged in to post.");
+            return;
+        }
+
+        const content = postContent.value.trim();
+        if (!content && !mediaFile) {
+            alert('Please write something or upload media!');
+            return;
+        }
+
         const newPost = {
-            id: new Date().getTime().toString(), // Unique ID
+            id: Date.now().toString(),
             content: content,
+            media: mediaFile ? URL.createObjectURL(mediaFile) : null,
             date: new Date().toISOString(),
+            username: user.username
         };
 
-        // Retrieve existing posts from localStorage
-        let posts = JSON.parse(localStorage.getItem('posts')) || [];
+        // Get posts from localStorage or initialize an empty array if none exist
+        const posts = JSON.parse(localStorage.getItem('posts')) || [];
 
         // Add the new post to the array
         posts.push(newPost);
 
-        // Save updated posts array back to localStorage
+        // Save the updated posts array back to localStorage
         localStorage.setItem('posts', JSON.stringify(posts));
 
-        // Close modal and reset fields
         toggleModal(false);
 
-        console.log('Post created:', newPost);
-    } else {
-        alert('Please write something!');
-    }
-});
+        // Create the toast message
+        const toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.classList.add('fixed', 'bottom-5', 'right-5', 'z-50');
 
-// Error Handling
-function showError(show = true) {
-    errorState.classList.toggle('hidden', !show);
-    postFeed.classList.toggle('hidden', show);
-}
+        toastContainer.innerHTML = `
+            <style>
+                .toast {
+                    display: block;
+                    padding: 12px;
+                    background-color: #38a169;
+                    color: white;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    font-size: 14px;
+                    font-weight: 600;
+                    animation: fadeInRight 0.5s forwards;
+                }
 
-retryButton.addEventListener('click', () => {
-    showError(false);
-    // Implement retry logic here
-});
-
-// Loading State
-function toggleLoading(show = true) {
-    loadingIndicator.classList.toggle('hidden', !show);
-}
-
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    setViewMode('list'); // Ensures the page loads in list view by default
-
-    const sampleStories = [
-        { username: 'user1', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' },
-        { username: 'user2', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-        { username: 'user3', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=150' }
-    ];
-
-    const storiesContainer = document.querySelector('.stories-container .flex');
-    sampleStories.forEach(story => {
-        storiesContainer.appendChild(createStoryElement(story));
-    });
-});
-
-// Keyboard Shortcuts
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !createPostModal.classList.contains('hidden')) {
-        toggleModal(false);
-    }
-});
-
-// Media Upload (Image & Video)
-const handleMediaUpload = (mediaType) => {
-    return new Promise((resolve) => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = mediaType === 'image' ? 'image/*' : 'video/*';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(file);
-            }
-        };
-        input.click();
-    });
-};
-
-// Story Feature
-const initializeStories = () => {
-    const addStoryBtn = document.querySelector('.stories-container .bg-blue-500');
-    addStoryBtn?.addEventListener('click', async () => {
-        try {
-            const imageData = await handleMediaUpload('image');
-            if (!imageData) return;
-
-            const storyElement = createStoryElement({ username: 'Your story', avatar: imageData });
-            const storiesContainer = document.querySelector('.stories-container .flex');
-            const addStoryButton = storiesContainer.firstElementChild;
-            storiesContainer.insertBefore(storyElement, addStoryButton.nextSibling);
-        } catch (error) {
-            console.error('Error creating story:', error);
-        }
-    });
-};
-
-// Feelings/Activities Feature
-const initializeFeelings = () => {
-    const feelings = [
-        '😊 Happy', '😢 Sad', '😎 Cool', '😍 In love',
-        '😴 Tired', '🤔 Thinking', '😋 Hungry', '😌 Relaxed'
-    ];
-
-    const activities = [
-        '📚 Reading', '🎮 Gaming', '🎵 Listening to music',
-        '🏃‍♂️ Running', '✈️ Traveling', '🍳 Cooking'
-    ];
-
-    const createFeelingsMenu = () => {
-        const menu = document.createElement('div');
-        menu.className = 'absolute bottom-full mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 w-64';
-        menu.innerHTML = `
-            <div class="grid grid-cols-2 gap-2">
-                ${[...feelings, ...activities].map(item => ` 
-                    <button class="text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                        ${item}
-                    </button>
-                `).join('')}
-            </div>
-        `;
-        return menu;
-    };
-
-    const feelingBtns = document.querySelectorAll('button:has(svg path[d*="M14.828 14.828"])');
-    feelingBtns.forEach(btn => {
-        let menu = null;
-
-        btn.addEventListener('click', () => {
-            if (menu?.isConnected) {
-                menu.remove();
-                return;
-            }
-
-            menu = createFeelingsMenu();
-            btn.parentElement.appendChild(menu);
-
-            menu.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') {
-                    const feeling = e.target.textContent.trim();
-                    const postContent = document.getElementById('post-content');
-                    if (postContent) {
-                        postContent.value += `\nFeeling ${feeling}`;
-                        menu.remove();
+                @keyframes fadeInRight {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
                     }
                 }
-            });
-        });
+            </style>
+            <div class="toast">
+                Post created successfully!
+            </div>
+        `;
+
+        document.body.appendChild(toastContainer);
+
+        setTimeout(() => {
+            toastContainer.remove();
+        }, 4000);
     });
-};
 
-// Bookmark Feature
-function addBookmarkButton(postElement, post) {
-    const actionDiv = postElement.querySelector('.mt-4.flex.justify-between');
-    const bookmarkButton = document.createElement('button');
-    bookmarkButton.classList.add('bookmark-btn');
-
-    const isBookmarked = checkIfBookmarked(post.id);
-    updateBookmarkButton(bookmarkButton, isBookmarked);
-
-    bookmarkButton.addEventListener('click', () => toggleBookmark(post, bookmarkButton));
-    actionDiv.appendChild(bookmarkButton);
-}
-
-function updateBookmarkButton(button, isBookmarked) {
-    button.innerHTML = isBookmarked ?
-        '<svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path></svg>' :
-        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>';
-}
-
-function checkIfBookmarked(postId) {
-    const bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [];
-    return bookmarks.some(bookmark => bookmark.id === postId);
-}
-
-function toggleBookmark(post, bookmarkButton) {
-    let bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [];
-    const isBookmarked = checkIfBookmarked(post.id);
-
-    if (isBookmarked) {
-        bookmarks = bookmarks.filter(bookmark => bookmark.id !== post.id);
-    } else {
-        const bookmarkData = {
-            ...post,
-            bookmarkedAt: new Date().toISOString(),
-            comments: [],
-            isLiked: false
-        };
-        bookmarks.push(bookmarkData);
+    // Render Post
+    function renderPost(post) {
+        const user = getCurrentUser();
+        const postElement = document.createElement('div');
+        postElement.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6';
+        postElement.setAttribute('data-id', post.id);
+        postElement.innerHTML = `
+            <div class="flex items-center space-x-4">
+                <img class="w-10 h-10 rounded-full" src="https://images.unsplash.com/photo-1511367461989-f85a21fda167?crop=faces&fit=crop&w=200&h=200&q=80" alt="Profile Image">
+                <div>
+                    <p class="font-semibold text-gray-900 dark:text-white">${post.username}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">${new Date(post.date).toLocaleString()}</p>
+                </div>
+            </div>
+            <p class="mt-4 text-gray-700 dark:text-gray-300">${post.content}</p>
+            ${post.media ? `<img src="${post.media}" alt="Post Media" class="mt-4 max-h-96 w-full object-cover rounded-lg">` : ''}
+            <div class="mt-4 flex justify-between">
+                ${user && user.username === post.username ? `
+                    <button class="edit-post text-gray-500 hover:text-blue-500 transition-colors" data-id="${post.id}">Edit</button>
+                    <button class="delete-post text-gray-500 hover:text-red-500 transition-colors" data-id="${post.id}">Delete</button>
+                ` : ''}
+            </div>
+        `;
+        postFeed.prepend(postElement);
     }
 
-    localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
-    updateBookmarkButton(bookmarkButton, !isBookmarked);
-}
+    // Story Management
+    async function renderStories() {
+        // Predefined stories with Unsplash images
+        const predefinedStories = [
+            { media: 'https://images.unsplash.com/photo-1521747116042-5e5f1460c53d', username: 'User One' },
+            { media: 'https://images.unsplash.com/photo-1544179894-857a44036f32', username: 'User Two' },
+            { media: 'https://images.unsplash.com/photo-1519891212291-f444f76e99d3', username: 'User Three' }
+        ];
 
-// Media Buttons Feature
-const initializeMediaButtons = () => {
-    const mediaButtons = document.querySelectorAll('button:has(svg path[d*="M4 16l4.586-4.586"])');
+        // Fetch 3 random Indian users
+        const response = await fetch('https://randomuser.me/api/?nat=in&results=3');
+        const data = await response.json();
+        const randomUsers = data.results.map(user => ({
+            username: `${user.name.first} ${user.name.last}`,
+            media: user.picture.large
+        }));
 
-    mediaButtons.forEach(btn => {
-        btn.addEventListener('click', async () => {
-            try {
-                const mediaData = await handleMediaUpload('image');
-                if (!mediaData) return;
+        const stories = JSON.parse(localStorage.getItem('stories')) || [];
+        const allStories = [...predefinedStories, ...randomUsers, ...stories];
 
-                const postContent = document.getElementById('post-content');
-                if (postContent) {
-                    const preview = document.createElement('div');
-                    preview.className = 'mt-4';
-                    preview.innerHTML = `
-                        <img src="${mediaData}" alt="Preview" class="max-h-48 rounded-lg">
-                    `;
-                    postContent.parentElement.insertBefore(preview, postContent.nextSibling);
-                }
-            } catch (error) {
-                console.error('Error handling media:', error);
-            }
-        });
+        if (allStories.length === 0) {
+            storyContainer.innerHTML = `<p class="text-gray-500">No stories yet.</p>`;
+            return;
+        }
+
+        // Render stories with clickable images
+        storyContainer.innerHTML = allStories.map(story => `
+            <div class="story bg-gray-100 rounded-lg p-3 text-center">
+                <a href="${story.media}" target="_blank">
+                    <img src="${story.media}" alt="Story" class="w-16 h-16 rounded-full object-cover mx-auto cursor-pointer">
+                </a>
+                <p class="text-sm text-gray-700 mt-2">${story.username}</p>
+            </div>
+        `).join('');
+    }
+
+    // Add Story Button Click
+    addStoryButton.addEventListener('click', async () => {
+        const user = getCurrentUser();
+        if (!user) {
+            alert("You must be logged in to add a story.");
+            return;
+        }
+
+        const { file, url } = await handleMediaUpload();
+        if (!file) return;
+
+        const newStory = {
+            id: Date.now().toString(),
+            media: url,
+            username: user.username
+        };
+
+        const stories = JSON.parse(localStorage.getItem('stories')) || [];
+        stories.push(newStory);
+        localStorage.setItem('stories', JSON.stringify(stories));
+
+        renderStories();
     });
-};
 
-// Initialize Features
-initializeStories();
-initializeFeelings();
-initializeMediaButtons();
+    // Edit and Delete Post
+    postFeed.addEventListener('click', (e) => {
+        const user = getCurrentUser();
+        if (!user) return;
+
+        if (e.target.classList.contains('edit-post')) {
+            const postId = e.target.getAttribute('data-id');
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
+            const post = posts.find(p => p.id === postId);
+
+            if (post && post.username === user.username) {
+                postContent.value = post.content;
+                toggleModal(true);
+                submitPostBtn.onclick = () => updatePost(postId);
+            }
+        }
+
+        if (e.target.classList.contains('delete-post')) {
+            const postId = e.target.getAttribute('data-id');
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
+            const updatedPosts = posts.filter(p => p.id !== postId);
+
+            localStorage.setItem('posts', JSON.stringify(updatedPosts));
+            document.querySelector(`[data-id="${postId}"]`).remove();
+        }
+    });
+
+    // Update Post
+    function updatePost(postId) {
+        const content = postContent.value.trim();
+        if (!content && !mediaFile) {
+            alert('Please write something or upload media!');
+            return;
+        }
+
+        const posts = JSON.parse(localStorage.getItem('posts')) || [];
+        const postIndex = posts.findIndex(p => p.id === postId);
+        if (postIndex === -1) return;
+
+        posts[postIndex] = {
+            ...posts[postIndex],
+            content,
+            media: mediaFile ? URL.createObjectURL(mediaFile) : posts[postIndex].media
+        };
+
+        localStorage.setItem('posts', JSON.stringify(posts));
+        toggleModal(false);
+
+        // Re-render the post feed
+        postFeed.innerHTML = '';
+        posts.forEach(post => renderPost(post));
+    }
+
+    // Initial Load
+    function init() {
+        const posts = JSON.parse(localStorage.getItem('posts')) || [];
+        posts.forEach(post => renderPost(post));
+        renderStories();
+    }
+
+    init();
+});

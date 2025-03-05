@@ -1,162 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Social Media Login & Sign Up</title>
+  <title>Sign Up</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Custom animations */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-
-    .fade-in {
-      animation: fadeIn 0.5s ease-in-out;
-    }
-
-    .slide-in {
-      animation: slideIn 0.5s ease-in-out;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .floating-card {
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    }
-
     .error-message {
-      color: #ef4444;
-      /* Red-500 */
-      font-size: 0.875rem;
-      /* text-sm */
-      margin-top: 0.25rem;
-      /* mt-1 */
+      color: #ef4444; /* Red-500 */
+      font-size: 0.875rem; /* text-sm */
+      margin-top: 0.25rem; /* mt-1 */
     }
   </style>
 </head>
-
 <body class="bg-gray-50 min-h-screen flex items-center justify-center">
   <!-- Main Container -->
-  <div id="authContainer" class="bg-white rounded-lg floating-card overflow-hidden w-full max-w-md">
-    <!-- Toggle Buttons -->
-    <div class="flex">
-      <button id="loginTab"
-        class="flex-1 py-4 text-center font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-all">
-        Login
-      </button>
-      <button id="signupTab"
-        class="flex-1 py-4 text-center font-semibold text-gray-800 bg-gray-100 hover:bg-gray-200 transition-all">
-        Sign Up
-      </button>
-    </div>
-
-    <!-- Login Form -->
-    <div id="loginForm" class="p-8">
-      <h2 class="text-2xl font-bold text-gray-800 mb-6">Welcome Back!</h2>
-      <form id="loginFormElement" novalidate>
-        <!-- Email -->
-        <div class="mb-4">
-          <label for="loginEmail" class="block text-gray-700 mb-2">Email</label>
-          <input type="email" id="loginEmail"
-            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter your email" required>
-          <div id="loginEmailError" class="error-message hidden">Please enter a valid email address.</div>
-        </div>
-
-        <!-- Password -->
-        <div class="mb-6">
-          <label for="loginPassword" class="block text-gray-700 mb-2">Password</label>
-          <input type="password" id="loginPassword"
-            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter your password" required>
-          <div class="flex items-center mt-2">
-            <input type="checkbox" id="showLoginPassword" class="mr-2">
-            <label for="showLoginPassword" class="text-gray-700">Show Password</label>
-          </div>
-          <div id="loginPasswordError" class="error-message hidden">Password must be at least 8 characters long.</div>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit"
-          class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all">
-          Log In
-        </button>
-
-        <!-- New here? Register -->
-        <p class="text-center text-gray-600 mt-4">
-          New here? <a id="switchToSignup" class="text-blue-500 hover:underline cursor-pointer">Register</a>
-        </p>
-      </form>
-    </div>
-
+  <div id="authContainer" class="bg-white rounded-lg shadow-lg overflow-hidden w-full max-w-md">
     <!-- Sign-Up Form -->
-    <div id="signupForm" class="p-8 hidden">
+    <div id="signupForm" class="p-8">
       <h2 class="text-2xl font-bold text-gray-800 mb-6">Join Us Today!</h2>
       <form id="signupFormElement" novalidate>
         <!-- Full Name -->
         <div class="mb-4">
           <label for="signupName" class="block text-gray-700 mb-2">Full Name</label>
-          <input type="text" id="signupName"
-            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter your full name" required>
+          <input type="text" id="signupName" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your full name" required>
           <div id="nameError" class="error-message hidden">Please enter your full name.</div>
         </div>
 
         <!-- Email -->
         <div class="mb-4">
           <label for="signupEmail" class="block text-gray-700 mb-2">Email</label>
-          <input type="email" id="signupEmail"
-            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter your email" required>
+          <input type="email" id="signupEmail" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your email" required>
           <div id="emailError" class="error-message hidden">Please enter a valid email address.</div>
         </div>
 
         <!-- Password -->
         <div class="mb-6">
           <label for="signupPassword" class="block text-gray-700 mb-2">Password</label>
-          <input type="password" id="signupPassword"
-            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Create a password" required>
-          <div class="flex items-center mt-2">
-            <input type="checkbox" id="showPassword" class="mr-2">
-            <label for="showPassword" class="text-gray-700">Show Password</label>
-          </div>
+          <input type="password" id="signupPassword" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Create a password" required>
           <div id="passwordError" class="error-message hidden">Password must be at least 8 characters long.</div>
         </div>
 
         <!-- Submit Button -->
-        <button type="submit"
-          class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all">
+        <button type="submit" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all">
           Sign Up
         </button>
 
         <!-- Already have an account? -->
         <p class="text-center text-gray-600 mt-4">
-          Already have an account? <a id="switchToLogin" class="text-blue-500 hover:underline cursor-pointer">Log in</a>
+          Already have an account? <a href="/login" class="text-blue-500 hover:underline">Log in</a>
         </p>
       </form>
     </div>
@@ -164,138 +56,45 @@
 
   <!-- JavaScript -->
   <script>
-    // Toggle Password Visibility
-    const passwordInput = document.getElementById('signupPassword');
-    const showPasswordCheckbox = document.getElementById('showPassword');
-    const loginPasswordInput = document.getElementById('loginPassword');
-    const showLoginPasswordCheckbox = document.getElementById('showLoginPassword');
-
-    showPasswordCheckbox.addEventListener('change', () => {
-      passwordInput.type = showPasswordCheckbox.checked ? 'text' : 'password';
-    });
-
-    showLoginPasswordCheckbox.addEventListener('change', () => {
-      loginPasswordInput.type = showLoginPasswordCheckbox.checked ? 'text' : 'password';
-    });
-
-    // Form Validation and Storage
-    const loginFormElement = document.getElementById('loginFormElement');
     const signupFormElement = document.getElementById('signupFormElement');
-    const loginEmailError = document.getElementById('loginEmailError');
-    const loginPasswordError = document.getElementById('loginPasswordError');
-    const nameError = document.getElementById('nameError');
-    const emailError = document.getElementById('emailError');
-    const passwordError = document.getElementById('passwordError');
 
     // Sign-Up Form Submission
-    signupFormElement.addEventListener('submit', (e) => {
+    signupFormElement?.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Reset error messages
-      nameError.classList.add('hidden');
-      emailError.classList.add('hidden');
-      passwordError.classList.add('hidden');
-
-      // Validate Full Name
       const name = document.getElementById('signupName').value.trim();
-      if (!name) {
-        nameError.classList.remove('hidden');
-        return;
-      }
-
-      // Validate Email
       const email = document.getElementById('signupEmail').value.trim();
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        emailError.classList.remove('hidden');
-        return;
-      }
-
-      // Validate Password
       const password = document.getElementById('signupPassword').value.trim();
-      if (password.length < 8) {
-        passwordError.classList.remove('hidden');
+
+      if (!name || !email || !password) {
+        alert('Please fill in all fields.');
         return;
       }
 
-      // Store user data in localStorage
-      const user = { name, email, password };
-      localStorage.setItem('user', JSON.stringify(user));
+      try {
+        // Send registration data to the backend
+        const response = await fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password }),
+        });
 
-      // Redirect to login page
-      showLoginForm();
-      alert('Signed up successfully! Please log in.');
-      signupFormElement.reset();
+        const result = await response.json();
+
+        if (response.ok) {
+          // Store user data in localStorage
+          localStorage.setItem('loggedInUser', JSON.stringify(result.user));
+          alert(result.message);
+          // Redirect to login page after successful registration
+          window.location.href = '/login';
+        } else {
+          alert(result.message || 'Registration failed. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error during registration:', error);
+        alert('An error occurred during registration. Please try again.');
+      }
     });
-
-    // Login Form Submission
-    loginFormElement.addEventListener('submit', (e) => {
-      e.preventDefault();
-
-      // Reset error messages
-      loginEmailError.classList.add('hidden');
-      loginPasswordError.classList.add('hidden');
-
-      // Validate Email
-      const email = document.getElementById('loginEmail').value.trim();
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        loginEmailError.classList.remove('hidden');
-        return;
-      }
-
-      // Validate Password
-      const password = document.getElementById('loginPassword').value.trim();
-      if (password.length < 8) {
-        loginPasswordError.classList.remove('hidden');
-        return;
-      }
-
-      // Check if user exists in localStorage
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (!user || user.email !== email || user.password !== password) {
-        alert('Invalid email or password.');
-        return;
-      }
-
-      // Store logged-in user in localStorage
-      localStorage.setItem('loggedInUser', JSON.stringify(user));
-
-      // Redirect to homepage (/)
-      window.location.href = '/';
-    });
-
-    // Switch Between Login and Sign-Up Forms
-    const loginTab = document.getElementById('loginTab');
-    const signupTab = document.getElementById('signupTab');
-    const loginForm = document.getElementById('loginForm');
-    const signupForm = document.getElementById('signupForm');
-    const switchToSignup = document.getElementById('switchToSignup');
-    const switchToLogin = document.getElementById('switchToLogin');
-
-    const showLoginForm = () => {
-      loginForm.classList.remove('hidden');
-      signupForm.classList.add('hidden');
-      loginTab.classList.add('bg-blue-500', 'text-white');
-      loginTab.classList.remove('bg-gray-100', 'text-gray-800');
-      signupTab.classList.add('bg-gray-100', 'text-gray-800');
-      signupTab.classList.remove('bg-blue-500', 'text-white');
-    };
-
-    const showSignupForm = () => {
-      signupForm.classList.remove('hidden');
-      loginForm.classList.add('hidden');
-      signupTab.classList.add('bg-blue-500', 'text-white');
-      signupTab.classList.remove('bg-gray-100', 'text-gray-800');
-      loginTab.classList.add('bg-gray-100', 'text-gray-800');
-      loginTab.classList.remove('bg-blue-500', 'text-white');
-    };
-
-    loginTab.addEventListener('click', showLoginForm);
-    signupTab.addEventListener('click', showSignupForm);
-    switchToSignup.addEventListener('click', showSignupForm);
-    switchToLogin.addEventListener('click', showLoginForm);
   </script>
 </body>
-
 </html>
