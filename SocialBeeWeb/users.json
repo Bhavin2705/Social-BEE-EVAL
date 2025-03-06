@@ -34,5 +34,11 @@
     "name": "Test User",
     "email": "test1@example.com",
     "password": "password123"
+  },
+  {
+    "id": "b3e7d934-f777-4348-bb8c-00a2e271a2a5",
+    "name": "abcd",
+    "email": "abcd@gmail.com",
+    "password": "147852369"
   }
 ]

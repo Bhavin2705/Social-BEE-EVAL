@@ -31,7 +31,7 @@ const slideOut = (element, duration = 300, callback) => {
 };
 
 // Friend Requests Section
-const initializeFriendRequests = async () => {
+const initializeFriendRequests = () => {
     const container = document.getElementById('friend-requests-container');
     const noRequests = document.getElementById('no-requests');
     const requestCount = document.getElementById('request-count');
@@ -41,16 +41,27 @@ const initializeFriendRequests = async () => {
         return;
     }
 
-    const updateFriendRequests = (requests) => {
-        container.innerHTML = '';
-        requestCount.textContent = requests.length;
+    // Hardcoded fallback friend requests for instant load
+    const fallbackRequests = [
+        { id: 1, name: 'Priya Sharma', avatar: 'https://randomuser.me/api/portraits/women/1.jpg?nat=IN', mutualFriends: 5 },
+        { id: 2, name: 'Rahul Verma', avatar: 'https://randomuser.me/api/portraits/men/2.jpg?nat=IN', mutualFriends: 8 },
+        { id: 3, name: 'Aisha Khan', avatar: 'https://randomuser.me/api/portraits/women/3.jpg?nat=IN', mutualFriends: 3 },
+        { id: 4, name: 'Vikram Singh', avatar: 'https://randomuser.me/api/portraits/men/4.jpg?nat=IN', mutualFriends: 12 }
+    ];
 
-        if (requests.length === 0) {
+
+    let requests = fallbackRequests; // Initialize with fallback data
+
+    const updateFriendRequests = (requestsList) => {
+        container.innerHTML = '';
+        requestCount.textContent = requestsList.length;
+
+        if (requestsList.length === 0) {
             noRequests.classList.remove('hidden');
             fadeIn(noRequests);
         } else {
             noRequests.classList.add('hidden');
-            requests.forEach((request, index) => {
+            requestsList.forEach((request, index) => {
                 const requestElement = createFriendRequestElement(request);
                 container.appendChild(requestElement);
                 setTimeout(() => slideIn(requestElement), index * 100);
@@ -83,8 +94,8 @@ const initializeFriendRequests = async () => {
         const handleResponse = () => {
             slideOut(div, 300, () => {
                 div.remove();
-                requests = requests.filter((r) => r.id !== request.id); // Remove request from the array
-                updateFriendRequests(requests); // Update UI
+                requests = requests.filter((r) => r.id !== request.id);
+                updateFriendRequests(requests);
             });
         };
 
@@ -94,34 +105,57 @@ const initializeFriendRequests = async () => {
         return div;
     };
 
-    // Fetch friend requests from the backend
     const fetchFriendRequests = async (count) => {
         try {
-            const response = await fetch(`https://randomuser.me/api/?results=${count}`);
-            if (!response.ok) {
-                throw new Error(`Network response was not ok: ${response.statusText}`);
-            }
+            const response = await fetch(`https://randomuser.me/api/?results=${count}&inc=name,picture`);
+            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
             const data = await response.json();
-            console.log('API Response:', data); // Log the response for inspection
 
             if (!data.results || !Array.isArray(data.results)) {
                 throw new Error('Expected an array of friend requests in results');
             }
 
-            return data.results.map((user, index) => ({
-                id: index,
+            const newRequests = data.results.map((user, index) => ({
+                id: Date.now() + index, // Unique ID based on timestamp
                 name: `${user.name?.first || 'Unknown'} ${user.name?.last || ''}`,
                 avatar: user.picture?.thumbnail || 'default-avatar.png',
                 mutualFriends: Math.floor(Math.random() * 20) + 1,
             }));
+
+            localStorage.setItem('friendRequestsCache', JSON.stringify({
+                data: newRequests,
+                timestamp: Date.now()
+            }));
+            return newRequests;
         } catch (error) {
             console.error('Failed to fetch friend requests:', error);
-            return [];
+            return null;
         }
     };
 
-    let requests = await fetchFriendRequests(4); // Fetch 4 random friend requests
-    updateFriendRequests(requests);
+    const getCachedRequests = () => {
+        const cached = localStorage.getItem('friendRequestsCache');
+        if (!cached) return null;
+        const { data, timestamp } = JSON.parse(cached);
+        const isCacheValid = (Date.now() - timestamp) < 86400000; // 24-hour cache
+        return isCacheValid ? data : null;
+    };
+
+    const updateRequests = async () => {
+        // Start with cached data if available, otherwise use fallback
+        const cachedRequests = getCachedRequests();
+        requests = cachedRequests || fallbackRequests;
+        updateFriendRequests(requests);
+
+        // Fetch fresh data in the background
+        const freshRequests = await fetchFriendRequests(4);
+        if (freshRequests && JSON.stringify(freshRequests) !== JSON.stringify(requests)) {
+            requests = freshRequests;
+            updateFriendRequests(requests);
+        }
+    };
+
+    updateRequests();
 };
 
 // Trending Section
@@ -135,11 +169,11 @@ const initializeTrending = () => {
     }
 
     const updateTrendingTopics = (topics) => {
-        container.innerHTML = ''; // Clear existing topics
+        container.innerHTML = '';
         topics.forEach((topic, index) => {
             const topicElement = createTrendingTopicElement(topic);
             container.appendChild(topicElement);
-            setTimeout(() => fadeIn(topicElement), index * 100); // Add fade-in animation
+            setTimeout(() => fadeIn(topicElement), index * 100);
         });
     };
 
@@ -147,7 +181,7 @@ const initializeTrending = () => {
         const div = document.createElement('div');
         div.className =
             'trending-topic bg-blue-500 text-white rounded-full px-4 py-2 text-sm hover:bg-blue-600 transition cursor-pointer';
-        div.textContent = `${topic.tag}`; // Only display the topic name
+        div.textContent = `${topic.tag}`;
         return div;
     };
 
@@ -162,17 +196,16 @@ const initializeTrending = () => {
     ];
 
     refreshBtn.addEventListener('click', () => {
-        refreshBtn.classList.add('animate-spin'); // Add spin animation to refresh button
+        refreshBtn.classList.add('animate-spin');
         setTimeout(() => {
             refreshBtn.classList.remove('animate-spin');
             const newTopics = mockTrends
                 .sort(() => Math.random() - 0.5)
-                .slice(0, 6); // Select 6 random topics
+                .slice(0, 6);
             updateTrendingTopics(newTopics);
         }, 1000);
     });
 
-    // Initial load with 6 random topics
     updateTrendingTopics(mockTrends.slice(0, 6));
 };
 
@@ -187,7 +220,7 @@ const initializeActivityFeed = () => {
     }
 
     const updateActivityFeed = (activities) => {
-        feed.innerHTML = ''; // Clear existing feed
+        feed.innerHTML = '';
 
         activities.forEach((activity, index) => {
             const activityElement = createActivityElement(activity);
@@ -221,7 +254,6 @@ const initializeActivityFeed = () => {
         });
     });
 
-    // Mock data
     const mockActivities = [
         { type: 'like', text: 'John liked your post', time: '2 minutes ago' },
         { type: 'comment', text: 'Sarah commented on your photo', time: '5 minutes ago' },
