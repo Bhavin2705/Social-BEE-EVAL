@@ -40,5 +40,11 @@
     "name": "abcd",
     "email": "abcd@gmail.com",
     "password": "147852369"
+  },
+  {
+    "id": "c27c5dde-6b1e-488a-800a-0bf3b66d0096",
+    "name": "dhruv",
+    "email": "dhruvgupta2602@gmail.com",
+    "password": "asdfghjkl"
   }
 ]
