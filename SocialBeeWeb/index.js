@@ -1,331 +1,372 @@
 const express = require('express');
+const cors = require('cors');
 const path = require('path');
 const fs = require('fs').promises;
-const { v4: uuidv4 } = require('uuid');
-const fetch = require('node-fetch');
-const cors = require('cors');
+const axios = require('axios'); // Replaced node-fetch with axios
 
 const app = express();
 const PORT = process.env.PORT || 7000;
 
+// Enable CORS for all routes
+app.use(cors());
+
 // File paths
-const USERS_FILE = path.join(__dirname, 'users.json');
-const MESSAGES_FILE = path.join(__dirname, 'messages.json');
-const FRIEND_REQUESTS_FILE = path.join(__dirname, 'friendRequests.json');
+const FILES = {
+    users: path.join(__dirname, 'users.json'),
+    messages: path.join(__dirname, 'messages.json'),
+    friendRequests: path.join(__dirname, 'friendRequests.json')
+};
 
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Set EJS as the templating engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Helper functions
-const ensureFileExists = async (filePath, defaultData = []) => {
+// Ensure file exists and read data
+async function readFileData(filePath) {
     try {
-        await fs.access(filePath); // Check if file exists
-    } catch (error) {
-        // If file doesn't exist, create it with default data
-        await fs.writeFile(filePath, JSON.stringify(defaultData, null, 2));
+        await fs.access(filePath);
+    } catch {
+        await fs.writeFile(filePath, JSON.stringify([]));
     }
-};
+    const data = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(data || '[]');
+}
 
-const readData = async (filePath) => {
-    try {
-        await ensureFileExists(filePath); // Ensure file exists
-        const data = await fs.readFile(filePath, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error(`Error reading ${filePath}:`, error);
-        return [];
-    }
-};
+// Write data to file
+async function writeFileData(filePath, data) {
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+}
 
-const writeData = async (filePath, data) => {
-    try {
-        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-    } catch (error) {
-        console.error(`Error writing to ${filePath}:`, error);
-        throw error;
-    }
-};
-
-const validateEmail = (email) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
-};
-
-const isEmailUnique = async (email) => {
-    const users = await readData(USERS_FILE);
-    return !users.some(user => user.email === email);
-};
+// Generate a random ID between 1 and 1000
+function generateRandomId() {
+    return Math.floor(Math.random() * 1000) + 1;
+}
 
 // ====================== ROUTES ======================
 
-// 1. Static HTML Routes (Non-CRUD)
-app.get('/', async (req, res) => {
-    try {
-        await fs.access(path.join(__dirname, 'public', 'homePage.html'));
-        res.sendFile(path.join(__dirname, 'public', 'homePage.html'));
-    } catch (error) {
-        res.status(404).json({ message: 'Page not found' });
-    }
+// Static Routes
+app.get(['/', '/messages', '/explore', '/register', '/login'], (req, res) => {
+    const page = req.path === '/' ? 'homePage' : req.path.slice(1);
+    res.sendFile(path.join(__dirname, 'public', `${page}.html`));
 });
 
-app.get('/messages', async (req, res) => {
-    try {
-        await fs.access(path.join(__dirname, 'public', 'messages.html'));
-        res.sendFile(path.join(__dirname, 'public', 'messages.html'));
-    } catch (error) {
-        res.status(404).json({ message: 'Page not found' });
-    }
-});
-
-app.get('/explore', async (req, res) => {
-    try {
-        await fs.access(path.join(__dirname, 'public', 'explore.html'));
-        res.sendFile(path.join(__dirname, 'public', 'explore.html'));
-    } catch (error) {
-        res.status(404).json({ message: 'Page not found' });
-    }
-});
-
-app.get('/register', async (req, res) => {
-    try {
-        await fs.access(path.join(__dirname, 'public', 'register.html'));
-        res.sendFile(path.join(__dirname, 'public', 'register.html'));
-    } catch (error) {
-        res.status(404).json({ message: 'Page not found' });
-    }
-});
-
-app.get('/login', async (req, res) => {
-    try {
-        await fs.access(path.join(__dirname, 'public', 'login.html'));
-        res.sendFile(path.join(__dirname, 'public', 'login.html'));
-    } catch (error) {
-        res.status(404).json({ message: 'Page not found' });
-    }
-});
-
-// 2. POST Routes for Register and Login
+// User/Auth Routes
 app.post('/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
         if (!name || !email || !password) {
-            return res.status(400).json({ message: 'Name, email, and password are required' });
+            return res.status(400).json({ message: 'Missing required fields' });
         }
-
-        if (!validateEmail(email)) {
-            return res.status(400).json({ message: 'Invalid email format' });
-        }
-
-        if (!(await isEmailUnique(email))) {
-            return res.status(400).json({ message: 'User with this email already exists' });
-        }
-
-        const users = await readData(USERS_FILE);
-        const newUser = { id: uuidv4(), name, email, password };
-        users.push(newUser);
-        await writeData(USERS_FILE, users);
-
-        res.status(201).json({ message: 'User registered successfully', user: newUser });
-    } catch (error) {
-        console.error('Error during registration:', error);
-        res.status(500).json({ message: 'Failed to register user', error: error.message });
+        const data = await readFileData(FILES.users);
+        const newUser = { id: generateRandomId(), name, email, password };
+        data.push(newUser);
+        await writeFileData(FILES.users, data);
+        res.json({ message: 'User registered', user: newUser });
+    } catch (err) {
+        console.error('Error registering user:', err);
+        res.status(500).json({ message: 'Error registering user', error: err.message });
     }
 });
 
 app.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required' });
+        const data = await readFileData(FILES.users);
+        const user = data.find(u => u.email === email && u.password === password);
+        if (user) {
+            res.json({ message: 'Login successful', user });
+        } else {
+            res.status(401).json({ message: 'Login failed' });
         }
+    } catch (err) {
+        console.error('Error logging in:', err);
+        res.status(500).json({ message: 'Error logging in', error: err.message });
+    }
+});
 
-        const users = await readData(USERS_FILE);
-        const user = users.find(user => user.email === email);
+app.get('/profile', async (req, res) => {
+    try {
+        const data = await readFileData(FILES.users);
+        res.render('profile.ejs', { user: data[0] || {} });
+    } catch (err) {
+        console.error('Error fetching profile:', err);
+        res.status(500).json({ message: 'Error fetching profile', error: err.message });
+    }
+});
 
-        if (!user || user.password !== password) {
-            return res.status(401).json({ message: 'Invalid email or password' });
+app.post('/api/profile/update', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        const data = await readFileData(FILES.users);
+        if (data[0]) {
+            data[0] = { ...data[0], name, email };
+            await writeFileData(FILES.users, data);
+            res.json({ message: 'Profile updated', user: data[0] });
+        } else {
+            res.status(404).json({ message: 'User not found' });
         }
-
-        res.status(200).json({ message: 'Login successful', user });
-    } catch (error) {
-        console.error('Error during login:', error);
-        res.status(500).json({ message: 'Failed to login', error: error.message });
+    } catch (err) {
+        console.error('Error updating profile:', err);
+        res.status(500).json({ message: 'Error updating profile', error: err.message });
     }
 });
 
-// 3. Profile Routes (CRUD)
-app.post('/api/profile', async (req, res) => {
+app.post('/api/profile/password', async (req, res) => {
     try {
-        const { name, email, bio, profilePicture } = req.body;
-        if (!name || !email) return res.status(400).json({ message: 'Name and email are required' });
-
-        if (!(await isEmailUnique(email))) {
-            return res.status(400).json({ message: 'Profile with this email already exists' });
+        const { newPassword } = req.body;
+        const data = await readFileData(FILES.users);
+        if (data[0]) {
+            data[0].password = newPassword;
+            await writeFileData(FILES.users, data);
+            res.json({ message: 'Password updated' });
+        } else {
+            res.status(404).json({ message: 'User not found' });
         }
-
-        const users = await readData(USERS_FILE);
-        const newProfile = { id: uuidv4(), name, email, bio, profilePicture };
-        users.push(newProfile);
-        await writeData(USERS_FILE, users);
-
-        res.status(201).json({ message: 'Profile created successfully', profile: newProfile });
-    } catch (error) {
-        console.error('Error creating profile:', error);
-        res.status(500).json({ message: 'Failed to create profile', error: error.message });
+    } catch (err) {
+        console.error('Error updating password:', err);
+        res.status(500).json({ message: 'Error updating password', error: err.message });
     }
 });
 
-app.get('/api/profile', async (req, res) => {
-    try {
-        const { email } = req.query;
-        if (!email) return res.status(400).json({ message: 'Email is required' });
-
-        const users = await readData(USERS_FILE);
-        const user = users.find(user => user.email === email);
-        if (!user) return res.status(404).json({ message: 'Profile not found' });
-
-        res.status(200).json(user);
-    } catch (error) {
-        console.error('Error fetching profile data:', error);
-        res.status(500).json({ message: 'Failed to load profile data', error: error.message });
-    }
-});
-
-app.put('/api/profile', async (req, res) => {
-    try {
-        const { email, name, bio, profilePicture } = req.body;
-        if (!email || !name) return res.status(400).json({ message: 'Email and name are required' });
-
-        const users = await readData(USERS_FILE);
-        const userIndex = users.findIndex(user => user.email === email);
-        if (userIndex === -1) return res.status(404).json({ message: 'Profile not found' });
-
-        users[userIndex].name = name;
-        if (bio) users[userIndex].bio = bio;
-        if (profilePicture) users[userIndex].profilePicture = profilePicture;
-
-        await writeData(USERS_FILE, users);
-        res.status(200).json({ message: 'Profile updated successfully', user: users[userIndex] });
-    } catch (error) {
-        console.error('Error updating profile:', error);
-        res.status(500).json({ message: 'Failed to update profile', error: error.message });
-    }
-});
-
-app.delete('/api/profile', async (req, res) => {
-    try {
-        const { email } = req.query;
-        if (!email) return res.status(400).json({ message: 'Email is required' });
-
-        const users = await readData(USERS_FILE);
-        const filteredUsers = users.filter(user => user.email !== email);
-
-        if (users.length === filteredUsers.length) return res.status(404).json({ message: 'Profile not found' });
-
-        await writeData(USERS_FILE, filteredUsers);
-        res.status(200).json({ message: 'Profile deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting profile:', error);
-        res.status(500).json({ message: 'Failed to delete profile', error: error.message });
-    }
-});
-
-// 4. Messages Routes (CRUD)
+// Messages Routes
 app.post('/api/messages', async (req, res) => {
     try {
-        const { message } = req.body;
-        if (!message || message.trim() === '') return res.status(400).json({ message: 'Message cannot be empty' });
-
-        const messages = await readData(MESSAGES_FILE);
-        messages.push({ id: uuidv4(), message, timestamp: new Date().toISOString() });
-        await writeData(MESSAGES_FILE, messages);
-
-        res.status(200).json({ message: 'Message saved successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error processing the request', error: error.message });
+        const { message, userId } = req.body;
+        const data = await readFileData(FILES.messages);
+        const newMessage = {
+            id: generateRandomId(),
+            userId: userId || 'test-user',
+            message,
+            timestamp: new Date().toISOString(),
+            likes: [],
+            shares: [],
+            comments: [],
+            bookmarks: []
+        };
+        data.push(newMessage);
+        await writeFileData(FILES.messages, data);
+        res.json({ message: 'Message posted', post: newMessage });
+    } catch (err) {
+        console.error('Error posting message:', err);
+        res.status(500).json({ message: 'Error posting message', error: err.message });
     }
 });
 
 app.get('/api/messages', async (req, res) => {
     try {
-        const messages = await readData(MESSAGES_FILE);
-        res.status(200).json(messages);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error fetching messages', error: error.message });
+        const data = await readFileData(FILES.messages);
+        res.json(data);
+    } catch (err) {
+        console.error('Error fetching messages:', err);
+        res.status(500).json({ message: 'Error fetching messages', error: err.message });
     }
 });
 
 app.put('/api/messages', async (req, res) => {
     try {
         const { id, message } = req.body;
-        if (!id || !message || message.trim() === '') return res.status(400).json({ message: 'ID and message are required' });
-
-        const messages = await readData(MESSAGES_FILE);
-        const messageIndex = messages.findIndex(msg => msg.id === id);
-        if (messageIndex === -1) return res.status(404).json({ message: 'Message not found' });
-
-        messages[messageIndex].message = message;
-        await writeData(MESSAGES_FILE, messages);
-
-        res.status(200).json({ message: 'Message updated successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error updating message', error: error.message });
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1) {
+            data[msgIndex].message = message;
+            await writeFileData(FILES.messages, data);
+            res.json({ message: 'Message updated', post: data[msgIndex] });
+        } else {
+            res.status(404).json({ message: 'Message not found' });
+        }
+    } catch (err) {
+        console.error('Error updating message:', err);
+        res.status(500).json({ message: 'Error updating message', error: err.message });
     }
 });
 
 app.delete('/api/messages', async (req, res) => {
     try {
         const { id } = req.query;
-        if (!id) return res.status(400).json({ message: 'ID is required' });
-
-        const messages = await readData(MESSAGES_FILE);
-        const filteredMessages = messages.filter(msg => msg.id !== id);
-
-        if (messages.length === filteredMessages.length) return res.status(404).json({ message: 'Message not found' });
-
-        await writeData(MESSAGES_FILE, filteredMessages);
-        res.status(200).json({ message: 'Message deleted successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error deleting message', error: error.message });
+        console.log('Deleting message with id:', id); // Log the id
+        let data = await readFileData(FILES.messages);
+        console.log('Initial data:', data); // Log initial data
+        data = data.filter(m => m.id !== Number(id));
+        console.log('Updated data:', data); // Log updated data
+        await writeFileData(FILES.messages, data);
+        res.json({ message: 'Message deleted' });
+    } catch (err) {
+        console.error('Error deleting message:', err);
+        res.status(500).json({ message: 'Error deleting message', error: err.message });
     }
 });
 
-// 5. Friend Requests Routes (CRUD)
+// Likes
+app.post('/api/messages/:id/like', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1 && !data[msgIndex].likes.includes('test-user')) {
+            data[msgIndex].likes.push('test-user');
+            await writeFileData(FILES.messages, data);
+        }
+        res.json({ message: 'Liked', likes: data[msgIndex]?.likes });
+    } catch (err) {
+        console.error('Error liking message:', err);
+        res.status(500).json({ message: 'Error liking message', error: err.message });
+    }
+});
+
+app.post('/api/messages/:id/unlike', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1) {
+            data[msgIndex].likes = data[msgIndex].likes.filter(user => user !== 'test-user');
+            await writeFileData(FILES.messages, data);
+        }
+        res.json({ message: 'Unliked', likes: data[msgIndex]?.likes });
+    } catch (err) {
+        console.error('Error unliking message:', err);
+        res.status(500).json({ message: 'Error unliking message', error: err.message });
+    }
+});
+
+// Shares
+app.post('/api/messages/:id/share', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1) {
+            data[msgIndex].shares.push({ userId: 'test-user', timestamp: new Date().toISOString() });
+            await writeFileData(FILES.messages, data);
+        }
+        res.json({ message: 'Shared', shares: data[msgIndex]?.shares });
+    } catch (err) {
+        console.error('Error sharing message:', err);
+        res.status(500).json({ message: 'Error sharing message', error: err.message });
+    }
+});
+
+// Comments
+app.post('/api/messages/:id/comment', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { content } = req.body;
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1) {
+            const comment = { id: generateRandomId(), userId: 'test-user', content, timestamp: new Date().toISOString() };
+            data[msgIndex].comments.push(comment);
+            await writeFileData(FILES.messages, data);
+            res.json({ message: 'Commented', comment });
+        } else {
+            res.status(404).json({ message: 'Message not found' });
+        }
+    } catch (err) {
+        console.error('Error commenting on message:', err);
+        res.status(500).json({ message: 'Error commenting on message', error: err.message });
+    }
+});
+
+app.put('/api/messages/:id/comment/:commentId', async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const { content } = req.body;
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1) {
+            const commentIndex = data[msgIndex].comments.findIndex(c => c.id === commentId);
+            if (commentIndex !== -1) {
+                data[msgIndex].comments[commentIndex].content = content;
+                await writeFileData(FILES.messages, data);
+                res.json({ message: 'Comment updated', comment: data[msgIndex].comments[commentIndex] });
+            } else {
+                res.status(404).json({ message: 'Comment not found' });
+            }
+        } else {
+            res.status(404).json({ message: 'Message not found' });
+        }
+    } catch (err) {
+        console.error('Error updating comment:', err);
+        res.status(500).json({ message: 'Error updating comment', error: err.message });
+    }
+});
+
+app.delete('/api/messages/:id/comment/:commentId', async (req, res) => {
+    try {
+        const { id, commentId } = req.params;
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1) {
+            data[msgIndex].comments = data[msgIndex].comments.filter(c => c.id !== commentId);
+            await writeFileData(FILES.messages, data);
+            res.json({ message: 'Comment deleted' });
+        } else {
+            res.status(404).json({ message: 'Message not found' });
+        }
+    } catch (err) {
+        console.error('Error deleting comment:', err);
+        res.status(500).json({ message: 'Error deleting comment', error: err.message });
+    }
+});
+
+// Bookmarks
+app.post('/api/messages/:id/bookmark', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1 && !data[msgIndex].bookmarks.includes('test-user')) {
+            data[msgIndex].bookmarks.push('test-user');
+            await writeFileData(FILES.messages, data);
+        }
+        res.json({ message: 'Bookmarked', bookmarks: data[msgIndex]?.bookmarks });
+    } catch (err) {
+        console.error('Error bookmarking message:', err);
+        res.status(500).json({ message: 'Error bookmarking message', error: err.message });
+    }
+});
+
+app.post('/api/messages/:id/unbookmark', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = await readFileData(FILES.messages);
+        const msgIndex = data.findIndex(m => m.id === id);
+        if (msgIndex !== -1) {
+            data[msgIndex].bookmarks = data[msgIndex].bookmarks.filter(user => user !== 'test-user');
+            await writeFileData(FILES.messages, data);
+        }
+        res.json({ message: 'Unbookmarked', bookmarks: data[msgIndex]?.bookmarks });
+    } catch (err) {
+        console.error('Error unbookmarking message:', err);
+        res.status(500).json({ message: 'Error unbookmarking message', error: err.message });
+    }
+});
+
+// Friend Requests Routes
 app.post('/api/friend-requests', async (req, res) => {
     try {
         const { userId, friendId } = req.body;
-        if (!userId || !friendId) return res.status(400).json({ message: 'User ID and Friend ID are required' });
-
-        const friendRequests = await readData(FRIEND_REQUESTS_FILE);
-        const newRequest = { id: uuidv4(), userId, friendId, status: 'pending' };
-        friendRequests.push(newRequest);
-
-        await writeData(FRIEND_REQUESTS_FILE, friendRequests);
-        res.status(201).json({ message: 'Friend request sent successfully', request: newRequest });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error sending friend request', error: error.message });
+        const data = await readFileData(FILES.friendRequests);
+        const request = { id: generateRandomId(), userId, friendId, status: 'pending' };
+        data.push(request);
+        await writeFileData(FILES.friendRequests, data);
+        res.json({ message: 'Friend request sent', request });
+    } catch (err) {
+        console.error('Error sending friend request:', err);
+        res.status(500).json({ message: 'Error sending friend request', error: err.message });
     }
 });
 
 app.get('/api/friend-requests', async (req, res) => {
     try {
-        const friendRequests = await readData(FRIEND_REQUESTS_FILE);
-        res.status(200).json(friendRequests);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error fetching friend requests', error: error.message });
+        const data = await readFileData(FILES.friendRequests);
+        res.json(data);
+    } catch (err) {
+        console.error('Error fetching friend requests:', err);
+        res.status(500).json({ message: 'Error fetching friend requests', error: err.message });
     }
 });
 
@@ -333,98 +374,66 @@ app.put('/api/friend-requests/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
-        if (!status || !['accepted', 'rejected'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
-
-        const friendRequests = await readData(FRIEND_REQUESTS_FILE);
-        const requestIndex = friendRequests.findIndex(request => request.id === id);
-        if (requestIndex === -1) return res.status(404).json({ message: 'Friend request not found' });
-
-        friendRequests[requestIndex].status = status;
-        await writeData(FRIEND_REQUESTS_FILE, friendRequests);
-
-        res.status(200).json({ message: 'Friend request updated successfully', request: friendRequests[requestIndex] });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error updating friend request', error: error.message });
+        const data = await readFileData(FILES.friendRequests);
+        const requestIndex = data.findIndex(r => r.id === id);
+        if (requestIndex !== -1) {
+            data[requestIndex].status = status;
+            await writeFileData(FILES.friendRequests, data);
+            res.json({ message: 'Friend request updated', request: data[requestIndex] });
+        } else {
+            res.status(404).json({ message: 'Friend request not found' });
+        }
+    } catch (err) {
+        console.error('Error updating friend request:', err);
+        res.status(500).json({ message: 'Error updating friend request', error: err.message });
     }
 });
 
 app.delete('/api/friend-requests/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const friendRequests = await readData(FRIEND_REQUESTS_FILE);
-        const filteredRequests = friendRequests.filter(request => request.id !== id);
-
-        if (friendRequests.length === filteredRequests.length) return res.status(404).json({ message: 'Friend request not found' });
-
-        await writeData(FRIEND_REQUESTS_FILE, filteredRequests);
-        res.status(200).json({ message: 'Friend request deleted successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error deleting friend request', error: error.message });
+        let data = await readFileData(FILES.friendRequests);
+        data = data.filter(r => r.id !== id);
+        await writeFileData(FILES.friendRequests, data);
+        res.json({ message: 'Friend request deleted' });
+    } catch (err) {
+        console.error('Error deleting friend request:', err);
+        res.status(500).json({ message: 'Error deleting friend request', error: err.message });
     }
 });
 
+// External View Routes
 app.get('/reddit-posts', async (req, res) => {
+    const subreddit = req.query.subreddit || 'technology';
+    const after = req.query.after || '';
+    if (!/^[a-zA-Z0-9_]+$/.test(subreddit)) {
+        return res.status(400).json({ error: 'Invalid subreddit name' });
+    }
     try {
-        const subreddit = req.query.subreddit || 'technology';
-        const after = req.query.after || '';
-
-        // Validate subreddit name
-        const validateSubreddit = (subreddit) => {
-            const regex = /^[a-zA-Z0-9_]+$/;
-            return regex.test(subreddit);
-        };
-
-        if (!validateSubreddit(subreddit)) {
-            return res.status(400).json({ error: 'Invalid subreddit name' });
+        const response = await axios.get(`https://www.reddit.com/r/${subreddit}/new.json?after=${after}`, {
+            headers: {
+                'User-Agent': 'SocialApp/1.0' // Add a User-Agent header
+            }
+        });
+        if (response.status !== 200) {
+            throw new Error(`Reddit API returned status: ${response.status}`);
         }
-
-        // Fetch data from Reddit API
-        const response = await fetch(`https://www.reddit.com/r/${subreddit}/new.json?after=${after}`);
-        if (!response.ok) throw new Error(`Failed to fetch data from Reddit: ${response.statusText}`);
-
-        const data = await response.json();
-        res.json(data);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to fetch Reddit posts', details: error.message });
+        res.json(response.data);
+    } catch (err) {
+        console.error('Error fetching Reddit posts:', err);
+        res.status(500).json({ message: 'Error fetching Reddit posts', error: err.message });
     }
 });
 
-// 7. Profile Page Rendering Route
-app.get('/profile', async (req, res) => {
-    try {
-        const { email } = req.query;
-        if (!email) return res.status(400).json({ message: 'Email is required' });
-
-        const users = await readData(USERS_FILE);
-        const user = users.find(user => user.email === email);
-        if (!user) return res.status(404).json({ message: 'Profile not found' });
-
-        res.render('profile', { user });
-    } catch (error) {
-        console.error('Error rendering profile:', error);
-        res.status(500).json({ message: 'Failed to render profile', error: error.message });
-    }
-});
-
-// 8. My Posts Page Rendering Route
 app.get('/my-posts', async (req, res) => {
     try {
-        const messages = await readData(MESSAGES_FILE);
-        res.render('my-posts', { posts: messages });
-    } catch (error) {
-        console.error('Error rendering my-posts:', error);
-        res.status(500).json({ message: 'Failed to render my-posts', error: error.message });
+        const data = await readFileData(FILES.messages);
+        res.json(data);
+    } catch (err) {
+        console.error('Error fetching my posts:', err);
+        res.status(500).json({ message: 'Error fetching my posts', error: err.message });
     }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ message: 'Something went wrong!', error: err.message });
-});
-
-// Start the server
+// Start server
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
