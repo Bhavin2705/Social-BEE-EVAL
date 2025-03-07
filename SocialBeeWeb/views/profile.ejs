@@ -5,10 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile Page</title>
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Your existing CSS styles */
         :root {
             --primary-color: #0070f3;
             --primary-hover: #0060df;
@@ -46,7 +44,6 @@
             padding: 2rem 1rem;
         }
 
-        /* Profile Header */
         .profile-header {
             display: flex;
             flex-direction: column;
@@ -102,7 +99,6 @@
             margin-top: 0.25rem;
         }
 
-        /* Tabs */
         .tabs-container {
             width: 100%;
         }
@@ -138,7 +134,6 @@
             display: block;
         }
 
-        /* Card */
         .card {
             background-color: var(--card-background);
             border-radius: var(--radius);
@@ -174,7 +169,6 @@
             border-top: 1px solid var(--border-color);
         }
 
-        /* Forms */
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -278,7 +272,6 @@
             background-color: var(--primary-hover);
         }
 
-        /* Buttons */
         .icon-button {
             width: 2.5rem;
             height: 2.5rem;
@@ -306,7 +299,6 @@
             color: var(--text-color);
         }
 
-        /* Password requirements */
         .requirements-title {
             font-size: 0.875rem;
             font-weight: 500;
@@ -324,7 +316,6 @@
             margin-bottom: 0.25rem;
         }
 
-        /* Responsive */
         @media (max-width: 640px) {
             .container {
                 padding: 1rem;
@@ -353,20 +344,20 @@
         <div class="profile-header">
             <div class="profile-avatar-container">
                 <div class="profile-avatar">
-                    <img src="<%= user.profilePicture || 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-G9y9zdBMGxzuob6IDkm8zBhLxxIpAw.png' %>"
-                        alt="Profile Picture" id="profile-image">
+                    <img src="<%= user.profilePicture || 'https://via.placeholder.com/128' %>" alt="Profile Picture"
+                        id="profile-image">
                     <div class="avatar-overlay">
-                        <button class="icon-button">
+                        <button class="icon-button" id="upload-profile-picture">
                             <i class="fas fa-camera"></i>
                         </button>
                     </div>
                 </div>
             </div>
             <h1 class="profile-name" id="profile-name">
-                <%= user.name %>
+                <%= user.name || 'User Name' %>
             </h1>
             <p class="profile-email" id="profile-email">
-                <%= user.email %>
+                <%= user.email || 'user@example.com' %>
             </p>
         </div>
 
@@ -388,34 +379,25 @@
                         </button>
                     </div>
                     <div class="card-content">
-                        <form id="profile-form">
+                        <form id="profile-form" method="POST">
                             <div class="form-group">
                                 <label for="name">Name</label>
-                                <input type="text" id="name" value="<%= user.name %>" disabled>
+                                <input type="text" id="name" name="name" value="<%= user.name || '' %>" disabled>
                             </div>
-
                             <div class="form-group">
                                 <label for="email">Email</label>
-                                <input type="email" id="email" value="<%= user.email %>" disabled>
+                                <input type="email" id="email" name="email" value="<%= user.email || '' %>" disabled>
                             </div>
-
-                            <div class="form-group">
-                                <label for="bio">Bio</label>
-                                <textarea id="bio" placeholder="Tell us about yourself"
-                                    disabled><%= user.bio || '' %></textarea>
-                            </div>
-
                             <div class="form-group" id="profile-picture-group" style="display: none;">
-                                <label for="profile-picture">Profile Picture</label>
+                                <label for="profile-picture">Profile Picture URL</label>
                                 <div class="upload-container">
                                     <button type="button" class="upload-button" id="upload-button">
-                                        <i class="fas fa-upload"></i>
-                                        Upload Image
+                                        <i class="fas fa-upload"></i> Upload Image
                                     </button>
-                                    <p class="upload-hint">JPG, PNG or GIF. 1MB max.</p>
+                                    <input type="text" id="profile-picture" name="profilePicture"
+                                        value="<%= user.profilePicture || '' %>">
                                 </div>
                             </div>
-
                             <button type="submit" class="submit-button" id="save-profile-button" style="display: none;">
                                 Save Changes
                             </button>
@@ -429,56 +411,43 @@
                     <div class="card-header">
                         <div>
                             <h2 class="card-title">Change Password</h2>
-                            <p class="card-description">Update your password to keep your account secure</p>
+                            <p class="card-description">Update your password</p>
                         </div>
                     </div>
                     <div class="card-content">
-                        <form id="password-form">
+                        <form id="password-form" method="POST">
                             <div class="form-group">
                                 <label for="current-password">Current Password</label>
                                 <div class="password-input-container">
-                                    <input type="password" id="current-password"
-                                        placeholder="Enter your current password">
+                                    <input type="password" id="current-password" name="currentPassword"
+                                        placeholder="Enter current password" required>
                                     <button type="button" class="password-toggle">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
                             </div>
-
                             <div class="form-group">
                                 <label for="new-password">New Password</label>
                                 <div class="password-input-container">
-                                    <input type="password" id="new-password" placeholder="Enter your new password">
+                                    <input type="password" id="new-password" name="newPassword"
+                                        placeholder="Enter new password" required>
                                     <button type="button" class="password-toggle">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
                             </div>
-
                             <div class="form-group">
                                 <label for="confirm-password">Confirm New Password</label>
                                 <div class="password-input-container">
-                                    <input type="password" id="confirm-password"
-                                        placeholder="Confirm your new password">
+                                    <input type="password" id="confirm-password" name="confirmPassword"
+                                        placeholder="Confirm new password" required>
                                     <button type="button" class="password-toggle">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
                             </div>
-
-                            <button type="submit" class="submit-button">
-                                Update Password
-                            </button>
+                            <button type="submit" class="submit-button">Update Password</button>
                         </form>
-                    </div>
-                    <div class="card-footer">
-                        <h3 class="requirements-title">Password Requirements:</h3>
-                        <ul class="requirements-list">
-                            <li>Minimum 8 characters long</li>
-                            <li>At least one uppercase letter</li>
-                            <li>At least one number</li>
-                            <li>At least one special character</li>
-                        </ul>
                     </div>
                 </div>
             </div>
@@ -487,98 +456,48 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Fetch profile data on page load
-            const fetchProfileData = () => {
-                try {
-                    // Get the user's data from localStorage
-                    const user = JSON.parse(localStorage.getItem("user"));
-
-                    if (!user) {
-                        throw new Error("User data not found. Please log in again.");
-                    }
-
-                    // Populate form fields
-                    document.getElementById("name").value = user.name || "";
-                    document.getElementById("email").value = user.email || "";
-                    document.getElementById("bio").value = user.bio || "";
-                    document.getElementById("profile-image").src = user.profilePicture || "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-G9y9zdBMGxzuob6IDkm8zBhLxxIpAw.png";
-                    document.getElementById("profile-name").textContent = user.name || "User Name";
-                    document.getElementById("profile-email").textContent = user.email || "user@example.com";
-                } catch (error) {
-                    console.error("Error fetching profile data:", error);
-                    alert("Failed to load profile data. Please log in again.");
-                    window.location.href = "/login"; // Redirect to login page
-                }
-            };
-
-            // Fetch profile data when the page loads
-            fetchProfileData();
-
             // Tab switching
             const tabButtons = document.querySelectorAll(".tab-button");
             const tabContents = document.querySelectorAll(".tab-content");
-
-            tabButtons.forEach((button) => {
+            tabButtons.forEach(button => {
                 button.addEventListener("click", () => {
-                    // Remove active class from all buttons and contents
-                    tabButtons.forEach((btn) => btn.classList.remove("active"));
-                    tabContents.forEach((content) => content.classList.remove("active"));
-
-                    // Add active class to clicked button and corresponding content
+                    tabButtons.forEach(btn => btn.classList.remove("active"));
+                    tabContents.forEach(content => content.classList.remove("active"));
                     button.classList.add("active");
-                    const tabId = button.getAttribute("data-tab");
-                    document.getElementById(`${tabId}-tab`).classList.add("active");
+                    document.getElementById(`${button.dataset.tab}-tab`).classList.add("active");
                 });
             });
 
             // Edit mode toggle
             const editToggle = document.getElementById("edit-toggle");
-            const nameInput = document.getElementById("name");
-            const emailInput = document.getElementById("email");
-            const bioInput = document.getElementById("bio");
+            const inputs = document.querySelectorAll("#profile-form input, #profile-form textarea");
             const profilePictureGroup = document.getElementById("profile-picture-group");
-            const saveProfileButton = document.getElementById("save-profile-button");
+            const saveButton = document.getElementById("save-profile-button");
             let isEditing = false;
 
             editToggle.addEventListener("click", () => {
                 isEditing = !isEditing;
-
-                // Toggle edit icon
                 editToggle.innerHTML = isEditing ? '<i class="fas fa-save"></i>' : '<i class="fas fa-edit"></i>';
-
-                // Toggle input disabled state
-                nameInput.disabled = !isEditing;
-                emailInput.disabled = !isEditing;
-                bioInput.disabled = !isEditing;
-
-                // Toggle profile picture upload and save button visibility
+                inputs.forEach(input => input.disabled = !isEditing);
                 profilePictureGroup.style.display = isEditing ? "block" : "none";
-                saveProfileButton.style.display = isEditing ? "block" : "none";
+                saveButton.style.display = isEditing ? "block" : "none";
             });
 
             // Password visibility toggle
-            const passwordToggles = document.querySelectorAll(".password-toggle");
-
-            passwordToggles.forEach((toggle) => {
+            document.querySelectorAll(".password-toggle").forEach(toggle => {
                 toggle.addEventListener("click", () => {
                     const input = toggle.previousElementSibling;
                     const icon = toggle.querySelector("i");
-
-                    if (input.type === "password") {
-                        input.type = "text";
-                        icon.classList.remove("fa-eye");
-                        icon.classList.add("fa-eye-slash");
-                    } else {
-                        input.type = "password";
-                        icon.classList.remove("fa-eye-slash");
-                        icon.classList.add("fa-eye");
-                    }
+                    input.type = input.type === "password" ? "text" : "password";
+                    icon.classList.toggle("fa-eye");
+                    icon.classList.toggle("fa-eye-slash");
                 });
             });
 
-            // Handle profile picture upload
+            // Profile picture upload preview
             const uploadButton = document.getElementById("upload-button");
             const profileImage = document.getElementById("profile-image");
+            const profilePictureInput = document.getElementById("profile-picture");
 
             uploadButton.addEventListener("click", () => {
                 const fileInput = document.createElement("input");
@@ -586,72 +505,74 @@
                 fileInput.accept = "image/*";
                 fileInput.onchange = (e) => {
                     const file = e.target.files[0];
-
                     if (file) {
                         const reader = new FileReader();
                         reader.onload = (event) => {
                             profileImage.src = event.target.result;
+                            profilePictureInput.value = event.target.result;
                         };
                         reader.readAsDataURL(file);
                     }
                 };
-
                 fileInput.click();
             });
 
-            // Handle profile form submission
-            const profileForm = document.getElementById("profile-form");
-
-            profileForm.addEventListener("submit", (e) => {
+            // Profile form submission
+            document.getElementById("profile-form").addEventListener("submit", async (e) => {
                 e.preventDefault();
+                const formData = new FormData(e.target);
 
                 try {
-                    // Get the updated form data
-                    const updatedUser = {
-                        name: document.getElementById("name").value,
-                        email: document.getElementById("email").value,
-                        bio: document.getElementById("bio").value,
-                        profilePicture: document.getElementById("profile-image").src,
-                    };
+                    const response = await fetch('/api/profile/update', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    console.log('Profile update response:', result);
 
-                    // Save the updated data to localStorage
-                    localStorage.setItem("user", JSON.stringify(updatedUser));
-
-                    // Update displayed name and email
-                    document.getElementById("profile-name").textContent = updatedUser.name;
-                    document.getElementById("profile-email").textContent = updatedUser.email;
-
-                    alert("Profile updated successfully!");
+                    if (response.ok) {
+                        alert(result.message); // "Profile updated"
+                        if (result.user) {
+                            // Update header with exact values from backend, no fallbacks
+                            document.getElementById("profile-name").textContent = result.user.name;
+                            document.getElementById("profile-email").textContent = result.user.email;
+                            if (result.user.profilePicture) {
+                                document.getElementById("profile-image").src = result.user.profilePicture;
+                            }
+                        }
+                        editToggle.click(); // Exit edit mode
+                    } else {
+                        alert(`Error: ${result.message || 'Failed to update profile'}`);
+                    }
                 } catch (error) {
-                    console.error("Error updating profile:", error);
-                    alert("Failed to update profile. Please try again.");
+                    console.error('Profile update failed:', error);
+                    alert(`Error: Failed to update profile - ${error.message}`);
                 }
             });
 
-            // Handle password form submission
-            const passwordForm = document.getElementById("password-form");
-
-            passwordForm.addEventListener("submit", (e) => {
+            // Password form submission
+            document.getElementById("password-form").addEventListener("submit", async (e) => {
                 e.preventDefault();
+                const formData = new FormData(e.target);
 
-                // Get form data
-                const currentPassword = document.getElementById("current-password").value;
-                const newPassword = document.getElementById("new-password").value;
-                const confirmPassword = document.getElementById("confirm-password").value;
+                try {
+                    const response = await fetch('/api/profile/password', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    console.log('Password update response:', result);
 
-                // Basic validation
-                if (!currentPassword || !newPassword || !confirmPassword) {
-                    alert("Please fill in all password fields");
-                    return;
+                    if (response.ok) {
+                        alert(result.message); // "Password updated"
+                        e.target.reset();
+                    } else {
+                        alert(`Error: ${result.message || 'Failed to update password'}`);
+                    }
+                } catch (error) {
+                    console.error('Password update failed:', error);
+                    alert(`Error: Failed to update password - ${error.message}`);
                 }
-
-                if (newPassword !== confirmPassword) {
-                    alert("New passwords do not match");
-                    return;
-                }
-
-                alert("Password updated successfully!");
-                passwordForm.reset();
             });
         });
     </script>
